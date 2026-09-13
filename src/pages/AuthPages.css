@@ -1,0 +1,118 @@
+.ev-auth-card-container {
+  max-width: 440px;
+  margin: 40px auto;
+}
+
+.ev-auth-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 36px;
+  box-shadow: var(--shadow-main);
+}
+
+.ev-auth-brand-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-bottom: 28px;
+}
+
+.ev-auth-icon {
+  color: var(--accent-cyan);
+  margin-bottom: 12px;
+}
+
+.ev-auth-brand-head h2 {
+  font-family: var(--font-heading);
+  font-size: 1.4rem;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.ev-auth-brand-head p {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+}
+
+.ev-auth-error {
+  background: var(--status-red-bg);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: var(--status-red);
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  font-size: 0.85rem;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.ev-auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.ev-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ev-form-group label {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.ev-input-icon-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.ev-input-icon {
+  position: absolute;
+  left: 14px;
+  color: var(--text-muted);
+}
+
+.ev-input-icon-wrap input, .ev-plain-input {
+  width: 100%;
+  padding: 10px 14px 10px 40px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+}
+
+.ev-plain-input {
+  padding-left: 14px;
+}
+
+.ev-input-icon-wrap input:focus, .ev-plain-input:focus {
+  outline: none;
+  border-color: var(--accent-blue);
+}
+
+.ev-auth-submit-btn {
+  margin-top: 10px;
+  width: 100%;
+}
+
+.ev-auth-footer-link {
+  margin-top: 24px;
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.ev-auth-footer-link a {
+  color: var(--accent-blue);
+  font-weight: 600;
+}

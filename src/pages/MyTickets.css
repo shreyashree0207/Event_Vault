@@ -1,0 +1,42 @@
+.ev-tickets-page-header {
+  margin-bottom: 32px;
+}
+
+.ev-ticket-filter-pills {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.ev-tkt-filter-btn {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  padding: 8px 16px;
+  border-radius: var(--radius-full);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.ev-tkt-filter-btn:hover, .ev-tkt-filter-btn.active {
+  background: var(--accent-blue-glow);
+  color: var(--accent-blue);
+  border-color: var(--border-glow);
+}
+
+.ev-tickets-list-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.ev-empty-tickets-box {
+  background: var(--bg-card);
+  border: 1px dashed var(--border-subtle);
+  padding: 48px;
+  text-align: center;
+  border-radius: var(--radius-lg);
+  color: var(--text-secondary);
+}

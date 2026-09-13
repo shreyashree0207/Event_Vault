@@ -1,0 +1,39 @@
+.ev-queue-progress-wrapper {
+  margin: 24px 0;
+}
+
+.ev-queue-progress-info {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.ev-progress-label {
+  font-family: var(--font-mono);
+}
+
+.ev-progress-value {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.ev-progress-track {
+  height: 10px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+}
+
+.ev-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-blue) 0%, var(--accent-cyan) 100%);
+  border-radius: var(--radius-full);
+  transition: width 0.6s ease;
+}
+
+.ev-progress-bar.completed {
+  background: linear-gradient(90deg, #10B981 0%, #34D399 100%);
+}

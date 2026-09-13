@@ -1,0 +1,122 @@
+.ev-queue-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 32px;
+  box-shadow: var(--shadow-main);
+}
+
+.ev-queue-card--admitted {
+  border-color: rgba(16, 185, 129, 0.4);
+  background: linear-gradient(180deg, var(--bg-card) 0%, rgba(16, 185, 129, 0.05) 100%);
+}
+
+.ev-queue-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.ev-queue-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  letter-spacing: 0.08em;
+}
+
+.ev-queue-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.ev-queue-dot.waiting {
+  background: var(--status-amber);
+  box-shadow: 0 0 8px var(--status-amber);
+}
+.ev-queue-dot.admitted {
+  background: var(--status-green);
+  box-shadow: 0 0 8px var(--status-green);
+}
+
+.ev-queue-refresh-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.ev-queue-refresh-btn:hover {
+  color: var(--text-primary);
+  border-color: var(--border-glow);
+}
+
+.ev-queue-main-title {
+  font-family: var(--font-heading);
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 24px;
+}
+
+.ev-queue-stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.ev-queue-stat {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  padding: 20px;
+  border-radius: var(--radius-md);
+}
+
+.ev-stat-label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+}
+
+.ev-stat-value {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-heading);
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.ev-stat-icon {
+  color: var(--accent-blue);
+}
+
+.ev-admitted-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 20px;
+  background: var(--status-green-bg);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+}
+
+.ev-admitted-icon {
+  color: var(--status-green);
+  margin-bottom: 12px;
+}

@@ -1,0 +1,79 @@
+.ev-ticket-status-box {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  margin: 28px 0;
+}
+
+.ev-status-banner-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--accent-cyan);
+  letter-spacing: 0.08em;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.ev-rabbitmq-icon {
+  color: var(--accent-cyan);
+}
+
+.ev-status-state {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.ev-status-state h4 {
+  font-family: var(--font-heading);
+  font-size: 1.1rem;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.ev-status-state p {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+}
+
+.ev-state-icon.ready {
+  color: var(--status-green);
+}
+.ev-state-icon.failed {
+  color: var(--status-red);
+}
+.ev-state-icon.processing {
+  color: var(--accent-blue);
+  animation: spin 1s linear infinite;
+}
+
+.ev-step-msg {
+  font-family: var(--font-mono);
+  font-size: 0.8rem !important;
+  color: var(--accent-cyan) !important;
+}
+
+.ev-progress-bar-mini {
+  height: 6px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-full);
+  margin-top: 10px;
+  overflow: hidden;
+  width: 240px;
+  max-width: 100%;
+}
+
+.ev-progress-fill {
+  height: 100%;
+  background: var(--accent-blue);
+  transition: width 0.4s ease;
+}
+
+.ev-retry-btn {
+  margin-top: 10px;
+}

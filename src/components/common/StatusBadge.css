@@ -1,0 +1,57 @@
+.ev-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border: 1px solid transparent;
+}
+
+.ev-status-badge__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.ev-status-badge--success {
+  background: var(--status-green-bg);
+  color: var(--status-green);
+  border-color: rgba(16, 185, 129, 0.2);
+}
+.ev-status-badge--success .ev-status-badge__dot {
+  background: var(--status-green);
+  box-shadow: 0 0 6px var(--status-green);
+}
+
+.ev-status-badge--warning {
+  background: var(--status-amber-bg);
+  color: var(--status-amber);
+  border-color: rgba(245, 158, 11, 0.2);
+}
+.ev-status-badge--warning .ev-status-badge__dot {
+  background: var(--status-amber);
+  box-shadow: 0 0 6px var(--status-amber);
+}
+
+.ev-status-badge--danger {
+  background: var(--status-red-bg);
+  color: var(--status-red);
+  border-color: rgba(239, 68, 68, 0.2);
+}
+.ev-status-badge--danger .ev-status-badge__dot {
+  background: var(--status-red);
+  box-shadow: 0 0 6px var(--status-red);
+}
+
+.ev-status-badge--neutral {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-secondary);
+  border-color: var(--border-subtle);
+}
+.ev-status-badge--neutral .ev-status-badge__dot {
+  background: var(--text-muted);
+}

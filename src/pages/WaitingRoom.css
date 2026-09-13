@@ -1,0 +1,75 @@
+.ev-waiting-room-page {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px 0;
+}
+
+.ev-wr-header-banner {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  padding: 24px;
+  border-radius: var(--radius-lg);
+  margin-bottom: 28px;
+}
+
+.ev-wr-shield {
+  color: var(--accent-cyan);
+}
+
+.ev-wr-header-banner h1 {
+  font-family: var(--font-heading);
+  font-size: 1.5rem;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.ev-wr-header-banner p {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+}
+
+.ev-wr-explanation-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  margin-top: 24px;
+}
+
+.ev-wr-explanation-card h3 {
+  font-family: var(--font-heading);
+  font-size: 1.1rem;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.ev-wr-explanation-card p {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  line-height: 1.6;
+  font-style: italic;
+  margin-bottom: 16px;
+}
+
+.ev-wr-arch-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--accent-cyan);
+}
+
+.ev-admitted-cta-container {
+  margin-top: 32px;
+  display: flex;
+  justify-content: center;
+}
+
+.ev-admitted-btn {
+  width: 100%;
+  max-width: 400px;
+}

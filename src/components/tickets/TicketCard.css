@@ -1,0 +1,104 @@
+.ev-ticket-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  display: flex;
+  overflow: hidden;
+  position: relative;
+  box-shadow: var(--shadow-main);
+  transition: transform var(--transition-fast);
+}
+
+.ev-ticket-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--border-glow);
+}
+
+.ev-ticket-stub {
+  padding: 24px;
+  flex: 1;
+  border-right: 2px dashed var(--bg-primary);
+  position: relative;
+}
+
+.ev-ticket-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.ev-ticket-id {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--accent-cyan);
+}
+
+.ev-ticket-event-name {
+  font-family: var(--font-heading);
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 16px;
+}
+
+.ev-ticket-details-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ev-tkt-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.ev-tkt-info--seat {
+  color: var(--text-primary);
+  margin-top: 4px;
+}
+
+.ev-ticket-qr-section {
+  width: 180px;
+  background: var(--bg-secondary);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 10px;
+}
+
+.ev-qr-box {
+  background: #FFFFFF;
+  padding: 10px;
+  border-radius: var(--radius-md);
+  color: #0A0D14;
+}
+
+.ev-qr-subtext {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+
+.ev-download-btn {
+  width: 100%;
+}
+
+@media (max-width: 640px) {
+  .ev-ticket-card {
+    flex-direction: column;
+  }
+  .ev-ticket-stub {
+    border-right: none;
+    border-bottom: 2px dashed var(--bg-primary);
+  }
+  .ev-ticket-qr-section {
+    width: 100%;
+  }
+}

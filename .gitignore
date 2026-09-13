@@ -1,0 +1,56 @@
+# Dependencies and build output
+node_modules/
+dist/
+dist-ssr/
+backend/venv/
+.venv/
+venv/
+
+# Environment files and local configuration
+.env
+.env.*
+!.env.example
+backend/.env
+backend/.env.*
+!backend/.env.example
+*.local
+
+# Python cache and test artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Logs and temporary/runtime files
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+*.tmp
+*.temp
+*.swp
+*.swo
+
+# Local database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Editor and OS files
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+desktop.ini
+Thumbs.db
+*.suo
+*.ntvs*
+*.njsproj
+*.sln

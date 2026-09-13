@@ -1,0 +1,131 @@
+.ev-profile-page {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.ev-profile-header-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 32px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 32px;
+}
+
+.ev-user-avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--accent-blue);
+}
+
+.ev-profile-user-info {
+  flex: 1;
+}
+
+.ev-profile-user-info h2 {
+  font-family: var(--font-heading);
+  font-size: 1.5rem;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.ev-profile-email {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.ev-user-account-id {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--accent-cyan);
+}
+
+.ev-profile-sections-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+.ev-profile-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+}
+
+.ev-pcard-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-heading);
+  color: var(--text-primary);
+  font-size: 1.1rem;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.ev-booking-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ev-history-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--bg-secondary);
+  padding: 12px;
+  border-radius: var(--radius-md);
+  font-size: 0.88rem;
+}
+
+.ev-hist-sub {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.ev-view-receipt-link {
+  color: var(--accent-blue);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.ev-security-options {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.ev-sec-item {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.ev-status-enabled {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--status-green);
+}
+
+@media (max-width: 768px) {
+  .ev-profile-header-card {
+    flex-direction: column;
+    text-align: center;
+  }
+  .ev-profile-sections-grid {
+    grid-template-columns: 1fr;
+  }
+}

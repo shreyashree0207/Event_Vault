@@ -1,0 +1,98 @@
+.ev-seatmap-container {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.ev-stage {
+  width: 80%;
+  margin-bottom: 40px;
+}
+
+.ev-stage-screen {
+  background: linear-gradient(180deg, rgba(59, 130, 246, 0.2) 0%, rgba(59, 130, 246, 0.02) 100%);
+  border: 1px solid var(--accent-blue);
+  border-bottom: none;
+  border-radius: 40px 40px 0 0;
+  text-align: center;
+  padding: 10px;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--accent-cyan);
+  letter-spacing: 0.15em;
+  box-shadow: 0 -10px 20px rgba(59, 130, 246, 0.15);
+}
+
+.ev-seats-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 36px;
+  max-width: 100%;
+  overflow-x: auto;
+  padding-bottom: 12px;
+}
+
+.ev-seat-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.ev-row-label {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  width: 20px;
+  text-align: center;
+}
+
+.ev-row-seats {
+  display: flex;
+  gap: 8px;
+}
+
+.ev-seat-legend {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border-subtle);
+  width: 100%;
+  justify-content: center;
+}
+
+.ev-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.ev-legend-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: var(--radius-sm);
+}
+
+.ev-legend-dot.available {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-subtle);
+}
+
+.ev-legend-dot.selected {
+  background: var(--accent-blue);
+  box-shadow: 0 0 8px rgba(59, 130, 246, 0.5);
+}
+
+.ev-legend-dot.unavailable {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  opacity: 0.4;
+}

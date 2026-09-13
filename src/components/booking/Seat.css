@@ -1,0 +1,42 @@
+.ev-seat {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  border: 1px solid transparent;
+}
+
+.ev-seat--available {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  border-color: var(--border-subtle);
+}
+
+.ev-seat--available:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--accent-blue);
+  transform: translateY(-2px);
+}
+
+.ev-seat--selected {
+  background: var(--accent-blue);
+  color: #FFFFFF;
+  border-color: #60A5FA;
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.6);
+}
+
+.ev-seat--unavailable {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-muted);
+  border-color: rgba(255, 255, 255, 0.05);
+  cursor: not-allowed;
+  opacity: 0.4;
+  text-decoration: line-through;
+}
