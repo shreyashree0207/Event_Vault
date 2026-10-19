@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { PageContainer } from '../components/layout/PageContainer';
 import { SeatMap } from '../components/booking/SeatMap';
@@ -11,6 +11,10 @@ import './Booking.css';
 export const Booking = () => {
   const { eventId } = useParams();
   const navigate = useNavigate();
+  const sessionIdRef = useRef(window.crypto.randomUUID());
+  const heldLocksRef = useRef(new Set());
+  const pendingLocksRef = useRef(new Set());
+  const activeEventIdRef = useRef(null);
 
   const [event, setEvent] = useState(null);
   const [seats, setSeats] = useState([]);
@@ -21,6 +25,10 @@ export const Booking = () => {
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    activeEventIdRef.current = eventId;
+    const heldLocks = heldLocksRef.current;
+    const sessionId = sessionIdRef.current;
+
     const initBookingData = async () => {
       setLoading(true);
       try {
@@ -36,12 +44,92 @@ export const Booking = () => {
       }
     };
     initBookingData();
+
+    return () => {
+      activeEventIdRef.current = null;
+
+      for (const seatCode of heldLocks) {
+        bookingService
+          .releaseSeatLock(eventId, seatCode, sessionId)
+          .catch(err => {
+            console.warn(`Could not release lock for seat ${seatCode}:`, err);
+          });
+      }
+
+      heldLocks.clear();
+    };
   }, [eventId]);
 
-  const handleToggleSeat = (seatCode) => {
-    setSelectedSeats(prev => 
-      prev.includes(seatCode) ? prev.filter(c => c !== seatCode) : [...prev, seatCode]
-    );
+  const handleToggleSeat = async (seatCode) => {
+    setError(null);
+
+    if (pendingLocksRef.current.has(seatCode)) {
+      return;
+    }
+
+    if (heldLocksRef.current.has(seatCode)) {
+      pendingLocksRef.current.add(seatCode);
+      try {
+        await bookingService.releaseSeatLock(
+          eventId,
+          seatCode,
+          sessionIdRef.current
+        );
+
+        if (activeEventIdRef.current === eventId) {
+          heldLocksRef.current.delete(seatCode);
+          setSelectedSeats(prev => prev.filter(code => code !== seatCode));
+        }
+      } catch (err) {
+        if (activeEventIdRef.current === eventId) {
+          setError(err.message || `Could not release seat ${seatCode}.`);
+        }
+      } finally {
+        pendingLocksRef.current.delete(seatCode);
+      }
+
+      return;
+    }
+
+    pendingLocksRef.current.add(seatCode);
+
+    try {
+      const lock = await bookingService.acquireSeatLock(
+        eventId,
+        seatCode,
+        sessionIdRef.current
+      );
+      const lockSessionId = lock.session_id || sessionIdRef.current;
+      sessionIdRef.current = lockSessionId;
+
+      if (activeEventIdRef.current !== eventId) {
+        try {
+          await bookingService.releaseSeatLock(
+            eventId,
+            seatCode,
+            lockSessionId
+          );
+        } catch (err) {
+          console.warn(`Could not release lock for seat ${seatCode}:`, err);
+        }
+        return;
+      }
+
+      heldLocksRef.current.add(seatCode);
+      setSelectedSeats(prev =>
+        prev.includes(seatCode) ? prev : [...prev, seatCode]
+      );
+    } catch (err) {
+      if (activeEventIdRef.current === eventId) {
+        setError(
+          err.response?.data?.detail ||
+          err.message ||
+          `Seat ${seatCode} could not be locked.`
+        );
+      }
+    } finally {
+      pendingLocksRef.current.delete(seatCode);
+    }
   };
 
   const handleProceedToCheckout = () => {
@@ -55,8 +143,21 @@ export const Booking = () => {
         eventId,
         event,
         selectedSeats,
-        event.startingPrice
+        event.startingPrice,
+        sessionIdRef.current
       );
+
+      await Promise.all(
+        [...heldLocksRef.current].map(seatCode =>
+          bookingService
+            .releaseSeatLock(eventId, seatCode, sessionIdRef.current)
+            .catch(err => {
+              console.warn(`Could not release lock for seat ${seatCode}:`, err);
+            })
+        )
+      );
+      heldLocksRef.current.clear();
+
       navigate(`/booking-confirmation/${newBooking.id}`);
     } catch (err) {
       setError(err.message || 'Payment simulation failed.');

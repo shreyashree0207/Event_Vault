@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
@@ -9,6 +9,15 @@ from routes.events import router as events_router
 from routes.bookings import router as bookings_router
 from routes.waiting_room import router as waiting_room_router
 from routes.tickets import router as tickets_router
+from pydantic import BaseModel
+from seat_locker import lock_seat, unlock_seat, new_session_id
+
+
+class SeatLockRequest(BaseModel):
+    event_id: str
+    seat_code: str
+    session_id: str | None = None
+
 
 # =========================================================
 # FASTAPI APPLICATION
@@ -19,6 +28,54 @@ app = FastAPI(
     description="Backend API for the Event Vault ticketing platform",
     version="1.0.0"
 )
+
+
+@app.post("/seat-locks")
+def create_seat_lock(request: SeatLockRequest):
+    session_id = request.session_id or new_session_id()
+
+    acquired = lock_seat(
+        request.event_id,
+        request.seat_code,
+        session_id,
+    )
+
+    if not acquired:
+        raise HTTPException(
+            status_code=409,
+            detail="This seat is temporarily locked by another session.",
+        )
+
+    return {
+        "event_id": request.event_id,
+        "seat_code": request.seat_code,
+        "session_id": session_id,
+        "expires_in_seconds": 300,
+        "message": "Seat temporarily locked.",
+    }
+
+
+@app.delete("/seat-locks")
+def release_seat_lock(request: SeatLockRequest):
+    if not request.session_id:
+        raise HTTPException(
+            status_code=400,
+            detail="session_id is required to release a seat lock.",
+        )
+
+    released = unlock_seat(
+        request.event_id,
+        request.seat_code,
+        request.session_id,
+    )
+
+    if not released:
+        raise HTTPException(
+            status_code=409,
+            detail="Lock not found or owned by another session.",
+        )
+
+    return {"message": "Seat lock released."}
 
 
 # =========================================================

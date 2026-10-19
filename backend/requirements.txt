@@ -4,3 +4,5 @@ sqlalchemy
 psycopg2-binary
 python-dotenv
 pydantic
+pika
+redis==8.1.0

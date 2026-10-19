@@ -35,5 +35,20 @@ export const apiClient = {
       return response.json();
     }
     throw new Error("Backend not configured. Service should fall back to mock data.");
+  },
+
+  async delete(endpoint, options = {}) {
+    if (USE_REAL_BACKEND) {
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(options.data),
+      });
+      if (!response.ok) {
+        throw new Error(`API Error ${response.status}: ${response.statusText}`);
+      }
+      return response.json();
+    }
+    throw new Error("Backend not configured. Service should fall back to mock data.");
   }
 };

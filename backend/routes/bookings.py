@@ -1,10 +1,14 @@
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from datetime import datetime
 
 from database import SessionLocal
-from models import Event, Seat, Booking
+
+from models import Event, Seat, Booking, Ticket
+from rabbitmq_publisher import publish_ticket_job
+from redis_client import redis_client
 
 
 router = APIRouter(
@@ -33,6 +37,7 @@ def get_db():
 class BookingRequest(BaseModel):
     eventId: str
     seatCodes: list[str]
+    sessionId: str | None = None
 
 
 # =========================================================
@@ -89,6 +94,26 @@ def create_booking(
             detail=f"Seats already booked: {', '.join(unavailable_seats)}"
         )
 
+    # Check Redis locks before booking seats
+    for seat in selected_seats:
+        lock_key = f"seat-lock:{booking_data.eventId}:{seat.seat_number}"
+        lock_owner = redis_client.get(lock_key)
+
+        if lock_owner is not None and lock_owner != booking_data.sessionId:
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    f"Seat {seat.seat_number} is temporarily "
+                    "locked by another session."
+                )
+            )
+
+        if booking_data.sessionId is not None and lock_owner is None:
+            raise HTTPException(
+                status_code=409,
+                detail=f"Seat {seat.seat_number} is not locked by this session."
+            )
+
     # Mark selected seats as booked
     for seat in selected_seats:
         seat.status = "booked"
@@ -115,10 +140,18 @@ def create_booking(
         0,
         event.available_seats - len(selected_seats)
     )
-
-    # Save to database
+    # Save the booking to PostgreSQL first
     db.commit()
     db.refresh(booking)
+
+# Send a ticket-generation job to RabbitMQ
+    try:
+       publish_ticket_job(booking.id)
+    except Exception as exc:
+       print(
+           f"WARNING: Booking {booking.id} was saved, "
+           f"but its ticket job could not be queued: {exc}"
+    )
 
     # -----------------------------------------------------
     # PAYMENT CALCULATION
@@ -268,13 +301,12 @@ def get_booking(
 # GET TICKET STATUS
 # GET /bookings/{booking_id}/ticket-status
 # =========================================================
-
+# GET TICKET STATUS
 @router.get("/{booking_id}/ticket-status")
 def get_ticket_status(
     booking_id: int,
     db: Session = Depends(get_db)
 ):
-    # Check whether booking exists
     booking = db.query(Booking).filter(
         Booking.id == booking_id
     ).first()
@@ -284,6 +316,25 @@ def get_ticket_status(
             status_code=404,
             detail="Booking not found"
         )
+
+    ticket = db.query(Ticket).filter(
+        Ticket.booking_id == booking_id
+    ).first()
+
+    if not ticket:
+        return {
+            "bookingId": booking.id,
+            "status": "PROCESSING",
+            "message": "Your ticket is being generated"
+        }
+
+    return {
+        "bookingId": booking.id,
+        "status": "READY",
+        "ticketId": ticket.id,
+        "ticketCode": ticket.ticket_code,
+        "message": "Ticket is ready"
+    }
 
     # -----------------------------------------------------
     # TEMPORARY IMPLEMENTATION

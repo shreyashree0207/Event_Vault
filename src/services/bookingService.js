@@ -27,11 +27,44 @@ export const bookingService = {
     return eventSeatsMap.get(eventId);
   },
 
-  async createBooking(eventId, eventDetails, selectedSeatCodes, basePrice) {
+  async acquireSeatLock(eventId, seatCode, sessionId = null) {
+    if (!USE_REAL_BACKEND) {
+      return { event_id: eventId, seat_code: seatCode, session_id: sessionId };
+    }
+
+    return apiClient.post('/seat-locks', {
+      event_id: eventId,
+      seat_code: seatCode,
+      ...(sessionId ? { session_id: sessionId } : {})
+    });
+  },
+
+  async releaseSeatLock(eventId, seatCode, sessionId) {
+    if (!USE_REAL_BACKEND || !sessionId) {
+      return;
+    }
+
+    return apiClient.delete('/seat-locks', {
+      data: {
+        event_id: eventId,
+        seat_code: seatCode,
+        session_id: sessionId
+      }
+    });
+  },
+
+  async createBooking(
+    eventId,
+    eventDetails,
+    selectedSeatCodes,
+    basePrice,
+    sessionId = null
+  ) {
     if (USE_REAL_BACKEND) {
       return apiClient.post('/bookings', {
         eventId,
-        seatCodes: selectedSeatCodes
+        seatCodes: selectedSeatCodes,
+        ...(sessionId ? { sessionId } : {})
       });
     }
 
