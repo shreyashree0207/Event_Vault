@@ -1,6 +1,8 @@
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
+from pydantic import BaseModel
 
 from database import Base, engine, SessionLocal
 import models
@@ -9,7 +11,7 @@ from routes.events import router as events_router
 from routes.bookings import router as bookings_router
 from routes.waiting_room import router as waiting_room_router
 from routes.tickets import router as tickets_router
-from pydantic import BaseModel
+
 from seat_locker import lock_seat, unlock_seat, new_session_id
 
 
@@ -29,6 +31,28 @@ app = FastAPI(
     version="1.0.0"
 )
 
+
+# =========================================================
+# CORS
+# =========================================================
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:5174",
+        "http://127.0.0.1:5174",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+# =========================================================
+# SEAT LOCK ENDPOINTS
+# =========================================================
 
 @app.post("/seat-locks")
 def create_seat_lock(request: SeatLockRequest):
@@ -79,49 +103,21 @@ def release_seat_lock(request: SeatLockRequest):
 
 
 # =========================================================
-# CORS
-# =========================================================
-
-app.add_middleware(
-    CORSMiddleware,
-
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173"
-    ],
-
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-
-# =========================================================
 # CREATE DATABASE TABLES
 # =========================================================
 
-Base.metadata.create_all(
-    bind=engine
-)
+Base.metadata.create_all(bind=engine)
 
 
 # =========================================================
 # REGISTER ROUTES
 # =========================================================
 
-app.include_router(
-    events_router
-)
-
-app.include_router(
-    bookings_router
-)
-
-app.include_router(
-    waiting_room_router
-)
-
+app.include_router(events_router)
+app.include_router(bookings_router)
+app.include_router(waiting_room_router)
 app.include_router(tickets_router)
+
 
 # =========================================================
 # ROOT
@@ -151,125 +147,70 @@ def health():
 # GET USER BOOKINGS
 # GET /user/bookings
 # =========================================================
-#
-# TEMPORARY USER SYSTEM
-#
-# Authentication/JWT is not implemented yet.
-# Therefore we currently use user_id = 1.
-#
-# Later:
-#
-# Login
-#   ↓
-# JWT
-#   ↓
-# actual user ID
-#   ↓
-# user's bookings
-#
-# =========================================================
 
 @app.get("/user/bookings")
 def get_user_bookings():
-
     db: Session = SessionLocal()
 
     try:
-
         # Temporary logged-in user
         user_id = 1
 
-        # Find all bookings for this user
-        bookings = db.query(models.Booking).filter(
-            models.Booking.user_id == user_id
-        ).order_by(
-            models.Booking.id.desc()
-        ).all()
+        bookings = (
+            db.query(models.Booking)
+            .filter(models.Booking.user_id == user_id)
+            .order_by(models.Booking.id.desc())
+            .all()
+        )
 
         result = []
 
         for booking in bookings:
-
-            # -------------------------------------------------
-            # FIND EVENT
-            # -------------------------------------------------
-
-            event = db.query(models.Event).filter(
-                models.Event.id == booking.event_id
-            ).first()
+            # Find event
+            event = (
+                db.query(models.Event)
+                .filter(models.Event.id == booking.event_id)
+                .first()
+            )
 
             if not event:
                 continue
 
-            # -------------------------------------------------
-            # FIND SEAT
-            # -------------------------------------------------
+            # Find seat
+            seat = (
+                db.query(models.Seat)
+                .filter(models.Seat.id == booking.seat_id)
+                .first()
+            )
 
-            seat = db.query(models.Seat).filter(
-                models.Seat.id == booking.seat_id
-            ).first()
+            seats = [seat.seat_number] if seat else []
 
-            seats = []
-
-            if seat:
-                seats.append(
-                    seat.seat_number
-                )
-
-            # -------------------------------------------------
-            # PAYMENT CALCULATION
-            # -------------------------------------------------
-
+            # Payment calculation
             ticket_price = event.starting_price
 
-            service_fee = round(
-                ticket_price * 0.12,
-                2
-            )
+            service_fee = round(ticket_price * 0.12, 2)
 
-            total_amount = round(
-                ticket_price + service_fee,
-                2
-            )
-
-            # -------------------------------------------------
-            # ADD BOOKING TO RESPONSE
-            # -------------------------------------------------
+            total_amount = round(ticket_price + service_fee, 2)
 
             result.append({
-
                 "id": booking.id,
-
                 "userId": booking.user_id,
-
                 "eventId": booking.event_id,
-
                 "eventName": event.name,
-
                 "eventDate": event.date,
-
                 "venue": event.venue,
-
                 "seats": seats,
-
                 "ticketPrice": ticket_price,
-
                 "serviceFee": service_fee,
-
                 "totalAmount": total_amount,
-
                 "paymentStatus": "PAID",
-
                 "bookingStatus": booking.status.upper(),
-
                 "createdAt": booking.booking_date,
-
                 # Temporary ticket status
-                "ticketStatus": "READY"
+                "ticketStatus": "READY",
             })
 
         return result
 
     finally:
-
         db.close()
