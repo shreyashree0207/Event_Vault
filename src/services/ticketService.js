@@ -56,6 +56,22 @@ export const ticketService = {
     return [...userTickets];
   },
 
+  async downloadTicket(ticketId) {
+    const blob = await apiClient.download(`/tickets/${ticketId}/download`);
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `event-vault-ticket-${ticketId}.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  },
+
+  async retryTicketGeneration(bookingId) {
+    return apiClient.post(`/tickets/bookings/${bookingId}/retry`, {});
+  },
+
   addTicketsFromBooking(booking) {
     const createdTickets = booking.seats.map(seatCode => ({
       id: `tkt-${booking.id.replace('bk-', '')}-${seatCode}`,

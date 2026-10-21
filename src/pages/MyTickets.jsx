@@ -27,6 +27,15 @@ export const MyTickets = () => {
     }
   };
 
+  const handleRetry = async (ticket) => {
+    try {
+      await ticketService.retryTicketGeneration(ticket.bookingId);
+      await fetchTickets();
+    } catch (err) {
+      setError(err.message || 'Ticket generation retry failed.');
+    }
+  };
+
   useEffect(() => {
     if (!authService.getCurrentUser()) {
       navigate('/login');
@@ -65,7 +74,14 @@ export const MyTickets = () => {
       ) : (
         <div className="ev-tickets-list-grid">
           {tickets.map(ticket => (
-            <TicketCard key={ticket.id} ticket={ticket} />
+            <TicketCard
+              key={ticket.id}
+              ticket={{
+                ...ticket,
+                onDownload: () => ticketService.downloadTicket(ticket.id),
+              }}
+              onRetry={handleRetry}
+            />
           ))}
         </div>
       )}

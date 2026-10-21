@@ -2,8 +2,7 @@
 import json
 import os
 import sys
-import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pika
@@ -18,54 +17,105 @@ load_dotenv(BACKEND_DIR / ".env")
 sys.path.insert(0, str(BACKEND_DIR))
 
 from database import SessionLocal
-from models import Booking, Ticket
+from models import Booking, Event, Seat, Ticket
+from ticket_storage import generate_ticket_pdf, store_ticket_pdf
 
 
 QUEUE_NAME = "event_vault_ticket_jobs"
 
 
 def create_ticket(booking_id: int) -> None:
-    """Create one ticket for a booking, without duplicating existing tickets."""
+    """Generate and persist one ticket for a confirmed booking."""
     db = SessionLocal()
 
     try:
         booking = (
             db.query(Booking)
             .filter(Booking.id == booking_id)
+            .with_for_update()
             .first()
         )
 
         if booking is None:
             raise ValueError(f"Booking {booking_id} does not exist")
+        if booking.status.lower() != "confirmed":
+            raise ValueError(f"Booking {booking_id} is not confirmed")
 
-        existing_ticket = (
+        ticket = (
+            db.query(Ticket)
+            .filter(Ticket.booking_id == booking_id)
+            .with_for_update()
+            .first()
+        )
+
+        if ticket is None:
+            raise ValueError(f"Ticket record for booking {booking_id} does not exist")
+        if ticket.status.lower() == "valid" and ticket.object_key:
+            print(f"Ticket already exists for booking {booking_id}; skipping duplicate.")
+            return
+
+        claimed = (
+            db.query(Ticket)
+            .filter(
+                Ticket.id == ticket.id,
+                Ticket.status.in_(["pending", "failed"]),
+            )
+            .update(
+                {
+                    Ticket.status: "generating",
+                    Ticket.error_message: None,
+                    Ticket.generation_started_at: datetime.now(
+                        timezone.utc
+                    ).isoformat(),
+                },
+                synchronize_session=False,
+            )
+        )
+        if not claimed:
+            db.rollback()
+            print(f"Ticket generation already in progress for booking {booking_id}.")
+            return
+        ticket_id = ticket.id
+        ticket_code = ticket.ticket_code
+        event = db.query(Event).filter(Event.id == booking.event_id).first()
+        seat = db.query(Seat).filter(Seat.id == booking.seat_id).first()
+        if event is None or seat is None:
+            raise ValueError(f"Event or seat for booking {booking_id} does not exist")
+
+        db.commit()
+
+        content = generate_ticket_pdf(
+            ticket_code=ticket_code,
+            booking_id=booking_id,
+            event_name=event.name,
+            event_date=event.date,
+            venue=event.venue,
+            seat_number=seat.seat_number,
+        )
+        object_key = store_ticket_pdf(ticket_code, content)
+
+        db.query(Ticket).filter(Ticket.id == ticket_id).update(
+            {
+                Ticket.status: "valid",
+                Ticket.object_key: object_key,
+                Ticket.error_message: None,
+            },
+            synchronize_session=False,
+        )
+        db.commit()
+        print(f"Ticket created successfully for booking {booking_id}.")
+
+    except Exception as exc:
+        db.rollback()
+        ticket = (
             db.query(Ticket)
             .filter(Ticket.booking_id == booking_id)
             .first()
         )
-
-        if existing_ticket:
-            print(
-                f"Ticket already exists for booking {booking_id}; "
-                "skipping duplicate."
-            )
-            return
-
-        ticket = Ticket(
-            booking_id=booking_id,
-            ticket_code=f"EV-{booking_id}-{uuid.uuid4().hex[:8].upper()}",
-            status="valid",
-            ticket_url="#",
-            created_at=datetime.now().isoformat(),
-        )
-
-        db.add(ticket)
-        db.commit()
-
-        print(f"Ticket created successfully for booking {booking_id}.")
-
-    except Exception:
-        db.rollback()
+        if ticket:
+            ticket.status = "failed"
+            ticket.error_message = str(exc)[:1000]
+            db.commit()
         raise
 
     finally:

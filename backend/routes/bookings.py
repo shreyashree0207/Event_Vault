@@ -390,16 +390,21 @@ def get_ticket_status(
     )
 
     if not ticket:
-        return {
-            "bookingId": booking.id,
-            "status": "PROCESSING",
-            "message": "Your ticket is being generated"
-        }
+        raise HTTPException(
+            status_code=409,
+            detail="Ticket generation has not been queued. Please retry ticket generation.",
+        )
 
     return {
         "bookingId": booking.id,
-        "status": "READY",
+        "status": (
+            "READY" if ticket.status.lower() == "valid"
+            else ticket.status.upper()
+        ),
         "ticketId": ticket.id,
         "ticketCode": ticket.ticket_code,
-        "message": "Ticket is ready"
+        "message": (
+            "Ticket is ready" if ticket.status.lower() == "valid"
+            else ticket.error_message or "Ticket generation is in progress."
+        ),
     }
