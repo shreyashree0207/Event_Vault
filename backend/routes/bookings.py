@@ -51,6 +51,12 @@ def create_booking(
     db: Session = Depends(get_db)
 ):
     try:
+        if not booking_data.sessionId:
+            raise HTTPException(
+                status_code=400,
+                detail="sessionId is required to confirm a booking"
+            )
+
         # Reject empty or duplicate seat selections
         if not booking_data.seatCodes:
             raise HTTPException(
