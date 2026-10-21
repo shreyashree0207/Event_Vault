@@ -1,46 +1,44 @@
-const USER_STORAGE_KEY = 'ev_user';
-
-function clearSession() {
-  localStorage.removeItem(USER_STORAGE_KEY);
-}
+import { apiClient } from './api';
+import { clearSession, readSession, saveSession } from './sessionStorage';
 
 export const authService = {
-  async login(name, mobile) {
+  async login(name, email) {
     const normalizedName = name.trim().replace(/\s+/g, ' ');
-    const normalizedMobile = mobile.trim().replace(/[\s().-]/g, '');
+    const normalizedEmail = email.trim().toLowerCase();
 
-    if (normalizedName.length < 2) {
-      throw new Error('Enter your full name.');
+    if (normalizedName.length < 2 || normalizedName.length > 120) {
+      throw new Error('Enter your full name (2 to 120 characters).');
     }
-    if (!/^\+?\d{7,15}$/.test(normalizedMobile)) {
-      throw new Error('Enter a valid mobile number with 7 to 15 digits.');
+    if (
+      normalizedEmail.length > 254 ||
+      !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(normalizedEmail)
+    ) {
+      throw new Error('Enter a valid email address.');
     }
 
-    const user = {
-      id: globalThis.crypto?.randomUUID?.()
-        || `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    const result = await apiClient.post('/auth/login', {
       name: normalizedName,
-      mobile: normalizedMobile,
-    };
-    localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
-    return user;
+      email: normalizedEmail,
+    });
+    saveSession({
+      id: result.user.id,
+      name: result.user.name,
+      email: result.user.email,
+      sessionId: result.user.sessionId,
+      accessToken: result.accessToken,
+    });
+    return this.getCurrentUser();
   },
 
   getCurrentUser() {
-    const stored = localStorage.getItem(USER_STORAGE_KEY);
-    if (!stored) {
-      return null;
-    }
-
-    try {
-      const user = JSON.parse(stored);
-      return user && user.id && user.name && user.mobile
-        ? user
-        : null;
-    } catch {
-      clearSession();
-      return null;
-    }
+    const session = readSession();
+    if (!session) return null;
+    return {
+      id: session.id,
+      name: session.name,
+      email: session.email,
+      sessionId: session.sessionId,
+    };
   },
 
   logout() {

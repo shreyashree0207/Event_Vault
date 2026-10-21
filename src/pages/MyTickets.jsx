@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { PageContainer } from '../components/layout/PageContainer';
 import { TicketCard } from '../components/tickets/TicketCard';
 import { Loader, ErrorState } from '../components/common/Loader';
 import { ticketService } from '../services/ticketService';
+import { authService } from '../services/authService';
 import './MyTickets.css';
 
 export const MyTickets = () => {
+  const navigate = useNavigate();
   const [tickets, setTickets] = useState([]);
   const [filter, setFilter] = useState('ALL'); // ALL, Upcoming, Completed, Cancelled
   const [loading, setLoading] = useState(true);
@@ -25,8 +28,12 @@ export const MyTickets = () => {
   };
 
   useEffect(() => {
+    if (!authService.getCurrentUser()) {
+      navigate('/login');
+      return;
+    }
     fetchTickets();
-  }, []);
+  }, [navigate]);
 
   return (
     <PageContainer>

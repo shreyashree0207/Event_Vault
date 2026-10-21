@@ -27,7 +27,7 @@ export const bookingService = {
     return eventSeatsMap.get(eventId);
   },
 
-  async acquireSeatLock(eventId, seatCode, sessionId = null) {
+  async acquireSeatLock(eventId, seatCode, sessionId = null, admissionToken = null) {
     if (!USE_REAL_BACKEND) {
       return { event_id: eventId, seat_code: seatCode, session_id: sessionId };
     }
@@ -35,7 +35,8 @@ export const bookingService = {
     return apiClient.post('/seat-locks', {
       event_id: eventId,
       seat_code: seatCode,
-      ...(sessionId ? { session_id: sessionId } : {})
+      ...(sessionId ? { session_id: sessionId } : {}),
+      ...(admissionToken ? { admission_token: admissionToken } : {})
     });
   },
 
@@ -58,13 +59,15 @@ export const bookingService = {
     eventDetails,
     selectedSeatCodes,
     basePrice,
-    sessionId = null
+    sessionId = null,
+    admissionToken = null
   ) {
     if (USE_REAL_BACKEND) {
       return apiClient.post('/bookings', {
         eventId,
         seatCodes: selectedSeatCodes,
-        ...(sessionId ? { sessionId } : {})
+        ...(sessionId ? { sessionId } : {}),
+        ...(admissionToken ? { admissionToken } : {})
       });
     }
 

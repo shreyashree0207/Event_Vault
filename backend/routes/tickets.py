@@ -5,6 +5,7 @@ import uuid
 
 from database import SessionLocal
 from models import Booking, Event, Seat, Ticket
+from auth import AuthenticatedUser, get_current_user
 
 
 router = APIRouter(
@@ -33,11 +34,12 @@ def get_db():
 
 @router.get("")
 def get_tickets(
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: AuthenticatedUser = Depends(get_current_user),
 ):
     # Find user's bookings
     bookings = db.query(Booking).filter(
-        Booking.user_id == 1
+        Booking.user_id == current_user.id
     ).order_by(
         Booking.id.desc()
     ).all()
@@ -148,7 +150,8 @@ def get_tickets(
 @router.get("/{ticket_id}")
 def get_ticket(
     ticket_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: AuthenticatedUser = Depends(get_current_user),
 ):
     # Find ticket
     ticket = db.query(Ticket).filter(
@@ -163,7 +166,8 @@ def get_ticket(
 
     # Find booking
     booking = db.query(Booking).filter(
-        Booking.id == ticket.booking_id
+        Booking.id == ticket.booking_id,
+        Booking.user_id == current_user.id,
     ).first()
 
     if not booking:

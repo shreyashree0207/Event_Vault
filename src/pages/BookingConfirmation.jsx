@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { CheckCircle2, Ticket as TicketIcon, Calendar, MapPin, ArrowRight } from 'lucide-react';
 import { PageContainer } from '../components/layout/PageContainer';
 import { TicketStatus } from '../components/tickets/TicketStatus';
@@ -7,10 +7,12 @@ import { Button } from '../components/common/Button';
 import { Loader, ErrorState } from '../components/common/Loader';
 import { bookingService } from '../services/bookingService';
 import { ticketService } from '../services/ticketService';
+import { authService } from '../services/authService';
 import './BookingConfirmation.css';
 
 export const BookingConfirmation = () => {
   const { bookingId } = useParams();
+  const navigate = useNavigate();
 
   const [booking, setBooking] = useState(null);
   const [ticketStatusData, setTicketStatusData] = useState(null);
@@ -32,6 +34,11 @@ export const BookingConfirmation = () => {
   };
 
   useEffect(() => {
+    if (!authService.getCurrentUser()) {
+      navigate('/login');
+      return;
+    }
+
     let intervalId;
 
     const initConfirmation = async () => {
@@ -57,7 +64,7 @@ export const BookingConfirmation = () => {
     return () => {
       if (intervalId) clearInterval(intervalId);
     };
-  }, [bookingId]);
+  }, [bookingId, navigate]);
 
   if (loading) return <PageContainer><Loader message="Verifying booking confirmation receipt..." /></PageContainer>;
   if (error || !booking) return <PageContainer><ErrorState title="Booking Record Error" message={error} /></PageContainer>;

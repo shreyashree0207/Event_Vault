@@ -7,8 +7,8 @@ export const SeatMap = ({ seats, selectedSeats, onToggleSeat }) => {
   // Group seats by row
   const rows = seats.reduce((acc, seat) => {
 
-    // Backend sends seatNumber like "A1", "B5", "J10"
-    const row = seat.seatNumber.charAt(0);
+    const seatNumber = seat.seatNumber || seat.code;
+    const row = seatNumber.charAt(0);
 
     if (!acc[row]) {
       acc[row] = [];
@@ -50,11 +50,11 @@ export const SeatMap = ({ seats, selectedSeats, onToggleSeat }) => {
                   seat={seat}
 
                   isSelected={
-                    selectedSeats.includes(seat.seatNumber)
+                    selectedSeats.includes(seat.seatNumber || seat.code)
                   }
 
                   onSelect={() =>
-                    onToggleSeat(seat.seatNumber)
+                    onToggleSeat(seat.seatNumber || seat.code)
                   }
                 />
 

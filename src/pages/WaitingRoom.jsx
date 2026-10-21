@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ShieldCheck, ArrowRight, Activity } from 'lucide-react';
 import { PageContainer } from '../components/layout/PageContainer';
@@ -8,6 +8,7 @@ import { Button } from '../components/common/Button';
 import { Loader, ErrorState } from '../components/common/Loader';
 import { waitingRoomService } from '../services/waitingRoomService';
 import { eventService } from '../services/eventService';
+import { authService } from '../services/authService';
 import './WaitingRoom.css';
 
 export const WaitingRoom = () => {
@@ -18,20 +19,27 @@ export const WaitingRoom = () => {
   const [queueState, setQueueState] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const intervalIdRef = useRef(null);
 
-  const syncQueue = async () => {
+  const syncQueue = useCallback(async () => {
     try {
       const status = await waitingRoomService.getQueueStatus(eventId);
       setQueueState(status);
+      if (['ADMITTED', 'EXPIRED', 'COMPLETED', 'FULL'].includes(status.status)) {
+        clearInterval(intervalIdRef.current);
+        intervalIdRef.current = null;
+      }
     } catch (err) {
       setError(err.message || 'Failed to communicate with Waiting Room engine.');
     }
-  };
+  }, [eventId]);
 
   useEffect(() => {
-    let intervalId;
-
     const initWaitingRoom = async () => {
+      if (!authService.getCurrentUser()) {
+        navigate('/login');
+        return;
+      }
       setLoading(true);
       try {
         const evData = await eventService.getEventById(eventId);
@@ -41,7 +49,9 @@ export const WaitingRoom = () => {
         setQueueState(initialStatus);
 
         // Auto polling queue status every 3.5 seconds
-        intervalId = setInterval(syncQueue, 3500);
+        if (!['ADMITTED', 'EXPIRED', 'COMPLETED', 'FULL'].includes(initialStatus.status)) {
+          intervalIdRef.current = setInterval(syncQueue, 3500);
+        }
       } catch (err) {
         setError(err.message || 'Waiting room initialization failed.');
       } finally {
@@ -52,9 +62,10 @@ export const WaitingRoom = () => {
     initWaitingRoom();
 
     return () => {
-      if (intervalId) clearInterval(intervalId);
+      clearInterval(intervalIdRef.current);
+      intervalIdRef.current = null;
     };
-  }, [eventId]);
+  }, [eventId, navigate, syncQueue]);
 
   const handleProceedToBooking = () => {
     navigate(`/booking/${eventId}`);

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float
+from sqlalchemy import Column, Integer, String, Float, Index, text
 from database import Base
 
 
@@ -12,7 +12,7 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
     email = Column(String, unique=True, nullable=False, index=True)
-    password = Column(String, nullable=False)
+    password = Column(String, nullable=True)
 
 
 # =========================
@@ -73,6 +73,10 @@ class Seat(Base):
     # booked
     status = Column(String, nullable=False, default="available")
 
+    __table_args__ = (
+        Index("uq_seats_event_number", "event_id", "seat_number", unique=True),
+    )
+
 
 # =========================
 # BOOKING
@@ -97,6 +101,15 @@ class Booking(Base):
 
     booking_date = Column(String, nullable=False)
 
+    __table_args__ = (
+        Index(
+            "uq_bookings_confirmed_seat",
+            "seat_id",
+            unique=True,
+            postgresql_where=text("lower(status) = 'confirmed'"),
+        ),
+    )
+
 
 # =========================
 # TICKET
@@ -107,7 +120,7 @@ class Ticket(Base):
 
     id = Column(Integer, primary_key=True, index=True)
 
-    booking_id = Column(Integer, nullable=False)
+    booking_id = Column(Integer, nullable=False, unique=True, index=True)
 
     ticket_code = Column(
         String,
@@ -117,11 +130,12 @@ class Ticket(Base):
     )
 
     # Examples:
-    # valid
-    # cancelled
-    # used
+    # pending, generating, failed, valid, cancelled, used
     status = Column(String, nullable=False, default="valid")
 
     ticket_url = Column(String, nullable=True)
+    object_key = Column(String, nullable=True)
+    error_message = Column(String, nullable=True)
+    generation_started_at = Column(String, nullable=True)
 
     created_at = Column(String, nullable=False)

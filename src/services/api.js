@@ -1,3 +1,5 @@
+import { readSession } from './sessionStorage';
+
 /**
  * Central API Client Abstraction
  * 
@@ -12,9 +14,15 @@ export const USE_REAL_BACKEND = true;
 
 async function request(endpoint, options = {}) {
   let response;
+  const headers = new Headers(options.headers);
+  const accessToken = readSession()?.accessToken;
+  if (accessToken) {
+    headers.set('Authorization', `Bearer ${accessToken}`);
+  }
   try {
     response = await fetch(`${API_BASE_URL}${endpoint}`, {
       ...options,
+      headers,
     });
   } catch (error) {
     if (error instanceof TypeError) {

@@ -1,8 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from redis.exceptions import RedisError
 
 from database import SessionLocal
 from models import Event, Seat
+from auth import AuthenticatedUser, get_current_user
+from redis_client import redis_client
 
 
 router = APIRouter(
@@ -131,7 +134,8 @@ def get_event(
 @router.get("/{event_id}/seats")
 def get_event_seats(
     event_id: str,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: AuthenticatedUser = Depends(get_current_user),
 ):
     # Check that the event exists
     event = db.query(Event).filter(
@@ -149,12 +153,29 @@ def get_event_seats(
         Seat.event_id == event_id
     ).order_by(Seat.id).all()
 
+    lock_keys = [
+        f"seat-lock:{event_id}:{seat.seat_number}"
+        for seat in seats
+    ]
+    try:
+        lock_owners = redis_client.mget(lock_keys) if lock_keys else []
+    except RedisError:
+        raise HTTPException(
+            status_code=503,
+            detail="Seat-lock service is unavailable. Please try again.",
+        )
+
     return [
         {
             "id": seat.id,
             "eventId": seat.event_id,
             "seatNumber": seat.seat_number,
-            "status": seat.status
+            "status": (
+                "booked" if seat.status.lower() == "booked"
+                else "locked" if lock_owner
+                else "available"
+            ),
+            "lockedByCurrentUser": lock_owner == current_user.session_id,
         }
-        for seat in seats
+        for seat, lock_owner in zip(seats, lock_owners)
     ]

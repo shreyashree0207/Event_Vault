@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Phone, ShieldCheck, Ticket, LogOut } from 'lucide-react';
+import { Mail, ShieldCheck, Ticket, LogOut } from 'lucide-react';
 import { PageContainer } from '../components/layout/PageContainer';
 import { Button } from '../components/common/Button';
 import { authService } from '../services/authService';
@@ -40,8 +40,8 @@ export const Profile = () => {
           <div className="ev-profile-user-info">
             <h2>{user.name}</h2>
             <div className="ev-profile-email">
-              <Phone size={14} />
-              <span>{user.mobile}</span>
+              <Mail size={14} />
+              <span>{user.email}</span>
             </div>
             <span className="ev-user-account-id">Guest profile</span>
           </div>
@@ -83,8 +83,9 @@ export const Profile = () => {
               <h3>Guest Profile</h3>
             </div>
             <p className="ev-empty-p-text">
-              This guest profile is stored in this browser only. The mobile
-              number is not verified and does not provide account security.
+              This guest profile is stored in PostgreSQL. The email address
+              is not verified, so guest identification does not provide
+              account security.
             </p>
           </div>
         </div>
