@@ -1,4 +1,6 @@
 
+import os
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
@@ -36,14 +38,21 @@ app = FastAPI(
 # CORS
 # =========================================================
 
+default_cors_origins = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:5174",
+    "http://127.0.0.1:5174",
+]
+cors_origins = [
+    origin.strip()
+    for origin in os.getenv("CORS_ORIGINS", "").split(",")
+    if origin.strip()
+] or default_cors_origins
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "http://localhost:5174",
-        "http://127.0.0.1:5174",
-    ],
+    allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -153,12 +162,9 @@ def get_user_bookings():
     db: Session = SessionLocal()
 
     try:
-        # Temporary logged-in user
-        user_id = 1
-
         bookings = (
             db.query(models.Booking)
-            .filter(models.Booking.user_id == user_id)
+            .filter(models.Booking.user_id == 1)
             .order_by(models.Booking.id.desc())
             .all()
         )
@@ -166,7 +172,6 @@ def get_user_bookings():
         result = []
 
         for booking in bookings:
-            # Find event
             event = (
                 db.query(models.Event)
                 .filter(models.Event.id == booking.event_id)
@@ -176,21 +181,14 @@ def get_user_bookings():
             if not event:
                 continue
 
-            # Find seat
             seat = (
                 db.query(models.Seat)
                 .filter(models.Seat.id == booking.seat_id)
                 .first()
             )
 
-            seats = [seat.seat_number] if seat else []
-
-            # Payment calculation
             ticket_price = event.starting_price
-
             service_fee = round(ticket_price * 0.12, 2)
-
-            total_amount = round(ticket_price + service_fee, 2)
 
             result.append({
                 "id": booking.id,
@@ -199,18 +197,16 @@ def get_user_bookings():
                 "eventName": event.name,
                 "eventDate": event.date,
                 "venue": event.venue,
-                "seats": seats,
+                "seats": [seat.seat_number] if seat else [],
                 "ticketPrice": ticket_price,
                 "serviceFee": service_fee,
-                "totalAmount": total_amount,
+                "totalAmount": round(ticket_price + service_fee, 2),
                 "paymentStatus": "PAID",
                 "bookingStatus": booking.status.upper(),
                 "createdAt": booking.booking_date,
-                # Temporary ticket status
                 "ticketStatus": "READY",
             })
 
         return result
-
     finally:
         db.close()

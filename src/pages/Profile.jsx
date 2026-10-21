@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { User, Mail, Calendar, ShieldCheck, Ticket, LogOut } from 'lucide-react';
+import { Phone, ShieldCheck, Ticket, LogOut } from 'lucide-react';
 import { PageContainer } from '../components/layout/PageContainer';
 import { Button } from '../components/common/Button';
 import { authService } from '../services/authService';
@@ -34,14 +34,16 @@ export const Profile = () => {
     <PageContainer>
       <div className="ev-profile-page">
         <div className="ev-profile-header-card">
-          <img src={user.avatar} alt={user.name} className="ev-user-avatar" />
+          <div className="ev-user-avatar" aria-label={user.name}>
+            {user.name.charAt(0).toUpperCase()}
+          </div>
           <div className="ev-profile-user-info">
             <h2>{user.name}</h2>
             <div className="ev-profile-email">
-              <Mail size={14} />
-              <span>{user.email}</span>
+              <Phone size={14} />
+              <span>{user.mobile}</span>
             </div>
-            <span className="ev-user-account-id">Account ID: {user.id}</span>
+            <span className="ev-user-account-id">Guest profile</span>
           </div>
 
           <Button variant="danger" size="sm" onClick={handleLogout} className="ev-profile-logout-btn">
@@ -78,18 +80,12 @@ export const Profile = () => {
           <div className="ev-profile-card">
             <div className="ev-pcard-header">
               <ShieldCheck size={18} />
-              <h3>Account Security Settings</h3>
+              <h3>Guest Profile</h3>
             </div>
-            <div className="ev-security-options">
-              <div className="ev-sec-item">
-                <span>Multi-Factor Authentication (MFA)</span>
-                <span className="ev-status-enabled">ENABLED</span>
-              </div>
-              <div className="ev-sec-item">
-                <span>FastAPI JWT Authentication Token</span>
-                <span className="ev-status-enabled">ACTIVE</span>
-              </div>
-            </div>
+            <p className="ev-empty-p-text">
+              This guest profile is stored in this browser only. The mobile
+              number is not verified and does not provide account security.
+            </p>
           </div>
         </div>
       </div>

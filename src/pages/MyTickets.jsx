@@ -13,6 +13,7 @@ export const MyTickets = () => {
 
   const fetchTickets = async () => {
     setLoading(true);
+    setError(null);
     try {
       const data = await ticketService.getTicketsForUser();
       setTickets(data);

@@ -35,21 +35,9 @@ def get_db():
 def get_tickets(
     db: Session = Depends(get_db)
 ):
-    # -----------------------------------------------------
-    # TEMPORARY USER
-    # -----------------------------------------------------
-    #
-    # Authentication is not implemented yet.
-    # Therefore we currently use user_id = 1.
-    #
-    # Later this will come from JWT authentication.
-    # -----------------------------------------------------
-
-    user_id = 1
-
     # Find user's bookings
     bookings = db.query(Booking).filter(
-        Booking.user_id == user_id
+        Booking.user_id == 1
     ).order_by(
         Booking.id.desc()
     ).all()

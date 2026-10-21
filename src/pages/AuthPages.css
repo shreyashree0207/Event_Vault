@@ -47,6 +47,18 @@
   text-align: center;
 }
 
+.ev-guest-notice {
+  margin-bottom: 20px;
+  padding: 10px 14px;
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  border-radius: var(--radius-md);
+  background: rgba(56, 189, 248, 0.08);
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  line-height: 1.5;
+  text-align: center;
+}
+
 .ev-auth-form {
   display: flex;
   flex-direction: column;

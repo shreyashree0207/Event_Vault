@@ -56,10 +56,7 @@ export const Navbar = () => {
             <div className="ev-auth-btns">
               <Link to="/login" className="ev-btn-text">
                 <LogIn size={16} />
-                <span>Log In</span>
-              </Link>
-              <Link to="/register" className="ev-btn-pill">
-                Register
+                <span>Continue</span>
               </Link>
             </div>
           )}

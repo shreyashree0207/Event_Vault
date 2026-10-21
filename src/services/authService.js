@@ -1,66 +1,50 @@
-import { apiClient, USE_REAL_BACKEND } from './api';
-import { MOCK_USER } from '../data/mockUser';
+const USER_STORAGE_KEY = 'ev_user';
 
-/**
- * Isolated Authentication Service
- * Target endpoints:
- *  - POST /auth/register
- *  - POST /auth/login
- */
-
-let currentUser = MOCK_USER;
+function clearSession() {
+  localStorage.removeItem(USER_STORAGE_KEY);
+}
 
 export const authService = {
-  async login(email, password) {
-    if (USE_REAL_BACKEND) {
-      return apiClient.post('/auth/login', { email, password });
-    }
-    
-    // Simulated Authentication Delay
-    await new Promise(resolve => setTimeout(resolve, 600));
+  async login(name, mobile) {
+    const normalizedName = name.trim().replace(/\s+/g, ' ');
+    const normalizedMobile = mobile.trim().replace(/[\s().-]/g, '');
 
-    if (!email || !password) {
-      throw new Error("Email and password are required.");
+    if (normalizedName.length < 2) {
+      throw new Error('Enter your full name.');
+    }
+    if (!/^\+?\d{7,15}$/.test(normalizedMobile)) {
+      throw new Error('Enter a valid mobile number with 7 to 15 digits.');
     }
 
-    currentUser = {
-      ...MOCK_USER,
-      email: email,
-      name: email.split('@')[0].replace('.', ' ')
+    const user = {
+      id: globalThis.crypto?.randomUUID?.()
+        || `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      name: normalizedName,
+      mobile: normalizedMobile,
     };
-    localStorage.setItem('ev_user', JSON.stringify(currentUser));
-    return currentUser;
-  },
-
-  async register(name, email, password) {
-    if (USE_REAL_BACKEND) {
-      return apiClient.post('/auth/register', { name, email, password });
-    }
-
-    await new Promise(resolve => setTimeout(resolve, 700));
-
-    currentUser = {
-      id: `usr-${Math.floor(100000 + Math.random() * 900000)}`,
-      name,
-      email,
-      avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=250&q=80",
-      createdAt: new Date().toISOString().split('T')[0]
-    };
-    localStorage.setItem('ev_user', JSON.stringify(currentUser));
-    return currentUser;
+    localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
+    return user;
   },
 
   getCurrentUser() {
-    const stored = localStorage.getItem('ev_user');
-    if (stored) {
-      try { return JSON.parse(stored); } catch { return MOCK_USER; }
+    const stored = localStorage.getItem(USER_STORAGE_KEY);
+    if (!stored) {
+      return null;
     }
-    return currentUser;
+
+    try {
+      const user = JSON.parse(stored);
+      return user && user.id && user.name && user.mobile
+        ? user
+        : null;
+    } catch {
+      clearSession();
+      return null;
+    }
   },
 
   logout() {
-    localStorage.removeItem('ev_user');
-    currentUser = null;
+    clearSession();
     return Promise.resolve(true);
-  }
+  },
 };

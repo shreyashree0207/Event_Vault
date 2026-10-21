@@ -20,6 +20,7 @@ Event Vault explores how an event ticketing system can remain usable during high
 - In-memory virtual waiting room prototype
 - Ticket generation and status prototype
 - My Tickets view
+- Browser-local guest profile using a name and mobile number
 
 The current implementation does not include Redis, RabbitMQ, Kubernetes, AWS deployment, autoscaling, or Locust load testing. The frontend contains mock-mode service code and future-oriented comments, but the default path uses the FastAPI backend.
 
@@ -44,6 +45,7 @@ Event_Vault/
 │   ├── seed_events.py           # Demo event data
 │   ├── seed_seats.py            # Demo seats for existing events
 │   └── routes/
+│       ├── auth.py
 │       ├── events.py
 │       ├── bookings.py
 │       ├── waiting_room.py
@@ -83,7 +85,7 @@ Event_Vault/
    DATABASE_URL=postgresql://postgres:YOUR_PASSWORD@localhost:5432/event_vault
    ```
 
-   Do not commit `backend/.env`.
+   Configure `CORS_ORIGINS` with the frontend origin(s). For a LAN frontend, include `http://<FRONTEND_HOST_LAN_IP>:5173`. Do not commit `backend/.env`.
 
 4. Create the backend environment and install dependencies:
 
@@ -131,6 +133,11 @@ The frontend reads the backend URL from `VITE_API_BASE_URL`. Create a root `.env
 VITE_API_BASE_URL=http://localhost:8000
 ```
 
+The login screen stores only a guest name and mobile number in the current
+browser. The mobile number is not verified, and this profile is not
+authentication or account security. Existing booking and ticket API behavior
+continues to use the backend's temporary demo user.
+
 Start the Vite development server:
 
 ```powershell
@@ -169,14 +176,13 @@ Open the URL printed by Vite, normally `http://localhost:5173`.
 - `POST /bookings` - Create a booking from an event ID and seat codes
 - `GET /bookings/{booking_id}` - Get one booking
 - `GET /bookings/{booking_id}/ticket-status` - Get ticket status for a booking
-- `GET /user/bookings` - Get bookings for the current temporary user
+- `GET /user/bookings` - Get bookings for the authenticated guest identity
 
 ### Tickets
 
-- `GET /tickets` - Get tickets for the current temporary user
+- `GET /tickets` - Get tickets for the authenticated guest identity
 - `GET /tickets/{ticket_id}` - Get one ticket
 
-Authentication is not implemented in the current backend; user-specific endpoints use the temporary user ID `1`.
 
 ## Architecture
 

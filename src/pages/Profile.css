@@ -18,8 +18,13 @@
   width: 72px;
   height: 72px;
   border-radius: 50%;
-  object-fit: cover;
+  display: grid;
+  place-items: center;
   border: 2px solid var(--accent-blue);
+  background: var(--bg-secondary);
+  color: var(--accent-cyan);
+  font-size: 1.6rem;
+  font-weight: 700;
 }
 
 .ev-profile-user-info {
