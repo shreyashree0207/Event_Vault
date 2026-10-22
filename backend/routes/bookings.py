@@ -405,6 +405,10 @@ def get_ticket_status(
         "ticketCode": ticket.ticket_code,
         "message": (
             "Ticket is ready" if ticket.status.lower() == "valid"
-            else ticket.error_message or "Ticket generation is in progress."
+            else (
+                "Ticket generation failed. Retry generation from My Tickets."
+                if ticket.status.lower() == "failed"
+                else "Ticket generation is in progress."
+            )
         ),
     }

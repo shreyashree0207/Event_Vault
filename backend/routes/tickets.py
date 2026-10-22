@@ -107,6 +107,11 @@ def get_tickets(
             "ticketStatus": "READY" if is_ready else ticket.status.upper(),
 
             "ticketUrl": f"/tickets/{ticket.id}/download" if is_ready else None,
+            "ticketMessage": (
+                "Ticket generation failed. Retry is available."
+                if ticket.status.lower() == "failed"
+                else None
+            ),
 
             "qrCode": ticket.ticket_code,
 
