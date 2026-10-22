@@ -1,10 +1,21 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Ticket, QrCode, Calendar, MapPin, Download } from 'lucide-react';
 import { StatusBadge } from '../common/StatusBadge';
 import { Button } from '../common/Button';
 import './TicketCard.css';
 
-export const TicketCard = ({ ticket }) => {
+export const TicketCard = ({ ticket, onRetry }) => {
+  const [error, setError] = useState(null);
+
+  const handleDownload = async () => {
+    setError(null);
+    try {
+      await ticket.onDownload();
+    } catch (err) {
+      setError(err.message || 'Ticket download failed.');
+    }
+  };
+
   return (
     <div className="ev-ticket-card">
       <div className="ev-ticket-stub">
@@ -35,11 +46,27 @@ export const TicketCard = ({ ticket }) => {
         <div className="ev-qr-box">
           <QrCode size={70} className="ev-qr-icon" />
         </div>
-        <span className="ev-qr-subtext">Scan at Entrance</span>
-        <Button variant="outline" size="sm" className="ev-download-btn">
-          <Download size={14} />
-          <span>Download PDF</span>
-        </Button>
+        <span className="ev-qr-subtext">{ticket.ticketCode || 'Ticket processing'}</span>
+        {ticket.ticketStatus === 'READY' && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="ev-download-btn"
+            onClick={handleDownload}
+          >
+            <Download size={14} />
+            <span>Download PDF</span>
+          </Button>
+        )}
+        {ticket.ticketStatus === 'FAILED' && onRetry && (
+          <Button variant="secondary" size="sm" onClick={() => onRetry(ticket)}>
+            Retry ticket
+          </Button>
+        )}
+        {ticket.ticketStatus !== 'READY' && ticket.ticketStatus !== 'FAILED' && (
+          <span className="ev-qr-subtext">Ticket is being generated</span>
+        )}
+        {error && <span role="alert" className="ev-ticket-error">{error}</span>}
       </div>
     </div>
   );

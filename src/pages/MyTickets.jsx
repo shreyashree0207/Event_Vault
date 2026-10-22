@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { PageContainer } from '../components/layout/PageContainer';
 import { TicketCard } from '../components/tickets/TicketCard';
 import { Loader, ErrorState } from '../components/common/Loader';
 import { ticketService } from '../services/ticketService';
+import { authService } from '../services/authService';
 import './MyTickets.css';
 
 export const MyTickets = () => {
+  const navigate = useNavigate();
   const [tickets, setTickets] = useState([]);
   const [filter, setFilter] = useState('ALL'); // ALL, Upcoming, Completed, Cancelled
   const [loading, setLoading] = useState(true);
@@ -24,9 +27,22 @@ export const MyTickets = () => {
     }
   };
 
+  const handleRetry = async (ticket) => {
+    try {
+      await ticketService.retryTicketGeneration(ticket.bookingId);
+      await fetchTickets();
+    } catch (err) {
+      setError(err.message || 'Ticket generation retry failed.');
+    }
+  };
+
   useEffect(() => {
+    if (!authService.getCurrentUser()) {
+      navigate('/login');
+      return;
+    }
     fetchTickets();
-  }, []);
+  }, [navigate]);
 
   return (
     <PageContainer>
@@ -58,7 +74,14 @@ export const MyTickets = () => {
       ) : (
         <div className="ev-tickets-list-grid">
           {tickets.map(ticket => (
-            <TicketCard key={ticket.id} ticket={ticket} />
+            <TicketCard
+              key={ticket.id}
+              ticket={{
+                ...ticket,
+                onDownload: () => ticketService.downloadTicket(ticket.id),
+              }}
+              onRetry={handleRetry}
+            />
           ))}
         </div>
       )}

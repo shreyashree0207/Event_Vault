@@ -6,3 +6,6 @@ python-dotenv
 pydantic
 pika
 redis==8.1.0
+locust
+boto3
+reportlab

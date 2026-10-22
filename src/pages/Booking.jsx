@@ -6,12 +6,15 @@ import { BookingSummary } from '../components/booking/BookingSummary';
 import { Loader, ErrorState } from '../components/common/Loader';
 import { eventService } from '../services/eventService';
 import { bookingService } from '../services/bookingService';
+import { authService } from '../services/authService';
+import { waitingRoomService } from '../services/waitingRoomService';
 import './Booking.css';
 
 export const Booking = () => {
   const { eventId } = useParams();
   const navigate = useNavigate();
-  const sessionIdRef = useRef(window.crypto.randomUUID());
+  const sessionIdRef = useRef(authService.getCurrentUser()?.sessionId);
+  const admissionTokenRef = useRef(null);
   const heldLocksRef = useRef(new Set());
   const pendingLocksRef = useRef(new Set());
   const activeEventIdRef = useRef(null);
@@ -30,6 +33,15 @@ export const Booking = () => {
     const sessionId = sessionIdRef.current;
 
     const initBookingData = async () => {
+      if (!sessionId) {
+        navigate('/login');
+        return;
+      }
+      admissionTokenRef.current = waitingRoomService.getAdmissionToken(eventId);
+      if (!admissionTokenRef.current) {
+        navigate(`/waiting-room/${eventId}`);
+        return;
+      }
       setLoading(true);
       try {
         const evData = await eventService.getEventById(eventId);
@@ -37,6 +49,11 @@ export const Booking = () => {
 
         const seatData = await bookingService.getEventSeats(eventId);
         setSeats(seatData);
+        const ownedSeats = seatData
+          .filter(seat => seat.lockedByCurrentUser)
+          .map(seat => seat.seatNumber);
+        heldLocksRef.current = new Set(ownedSeats);
+        setSelectedSeats(ownedSeats);
       } catch (err) {
         setError(err.message || 'Seat map initialization failed.');
       } finally {
@@ -58,7 +75,7 @@ export const Booking = () => {
 
       heldLocks.clear();
     };
-  }, [eventId]);
+  }, [eventId, navigate]);
 
   const handleToggleSeat = async (seatCode) => {
     setError(null);
@@ -73,7 +90,8 @@ export const Booking = () => {
         await bookingService.releaseSeatLock(
           eventId,
           seatCode,
-          sessionIdRef.current
+          sessionIdRef.current,
+          admissionTokenRef.current
         );
 
         if (activeEventIdRef.current === eventId) {
@@ -144,7 +162,8 @@ export const Booking = () => {
         event,
         selectedSeats,
         event.startingPrice,
-        sessionIdRef.current
+        sessionIdRef.current,
+        admissionTokenRef.current
       );
 
       await Promise.all(
@@ -157,6 +176,7 @@ export const Booking = () => {
         )
       );
       heldLocksRef.current.clear();
+      waitingRoomService.clearAdmissionToken(eventId);
 
       navigate(`/booking-confirmation/${newBooking.id}`);
     } catch (err) {

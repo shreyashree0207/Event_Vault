@@ -6,6 +6,7 @@ from unittest.mock import Mock, patch
 from fastapi import HTTPException
 from redis.exceptions import RedisError
 
+from auth import AuthenticatedUser
 from routes.bookings import BookingRequest, create_booking
 
 
@@ -45,7 +46,26 @@ class BookingLockTests(unittest.TestCase):
             eventId=self.event.id,
             seatCodes=["A2"],
             sessionId="requesting-session",
+            admissionToken="valid-admission",
         )
+        self.user = AuthenticatedUser(
+            id=7,
+            name="Test User",
+            email="test@example.com",
+            session_id="requesting-session",
+        )
+        self.admission_validation_patch = patch(
+            "routes.bookings.validate_admission_token",
+            return_value=True,
+        )
+        self.admission_release_patch = patch(
+            "routes.bookings.release_admission",
+            return_value=True,
+        )
+        self.admission_validation_patch.start()
+        self.admission_release_patch.start()
+        self.addCleanup(self.admission_validation_patch.stop)
+        self.addCleanup(self.admission_release_patch.stop)
 
     def test_rejects_seat_locked_by_another_session_before_writing(self):
         with patch(
@@ -53,7 +73,7 @@ class BookingLockTests(unittest.TestCase):
             return_value="lock-owning-session",
         ) as redis_get:
             with self.assertRaises(HTTPException) as raised:
-                create_booking(self.request, self.db)
+                create_booking(self.request, self.db, self.user)
 
         self.assertEqual(raised.exception.status_code, 409)
         self.assertEqual(
@@ -76,7 +96,7 @@ class BookingLockTests(unittest.TestCase):
             ),
             patch("routes.bookings.publish_ticket_job"),
         ):
-            result = create_booking(self.request, self.db)
+            result = create_booking(self.request, self.db, self.user)
 
         self.assertEqual(self.seat.status, "booked")
         self.assertEqual(self.event.available_seats, 9)
@@ -91,7 +111,7 @@ class BookingLockTests(unittest.TestCase):
             return_value=None,
         ):
             with self.assertRaises(HTTPException) as raised:
-                create_booking(self.request, self.db)
+                create_booking(self.request, self.db, self.user)
 
         self.assertEqual(raised.exception.status_code, 409)
         self.assertEqual(
@@ -109,7 +129,7 @@ class BookingLockTests(unittest.TestCase):
             side_effect=RedisError("Redis unavailable"),
         ):
             with self.assertRaises(HTTPException) as raised:
-                create_booking(self.request, self.db)
+                create_booking(self.request, self.db, self.user)
 
         self.assertEqual(raised.exception.status_code, 503)
         self.assertEqual(
@@ -126,10 +146,11 @@ class BookingLockTests(unittest.TestCase):
             eventId=self.event.id,
             seatCodes=["A2", "A2"],
             sessionId="requesting-session",
+            admissionToken="valid-admission",
         )
 
         with self.assertRaises(HTTPException) as raised:
-            create_booking(duplicate_request, self.db)
+            create_booking(duplicate_request, self.db, self.user)
 
         self.assertEqual(raised.exception.status_code, 400)
         self.assertEqual(
@@ -146,13 +167,56 @@ class BookingLockTests(unittest.TestCase):
         )
 
         with self.assertRaises(HTTPException) as raised:
-            create_booking(request_without_session_id, self.db)
+            create_booking(request_without_session_id, self.db, self.user)
 
         self.assertEqual(raised.exception.status_code, 400)
         self.assertEqual(
             raised.exception.detail,
             "sessionId is required to confirm a booking",
         )
+        self.db.query.assert_not_called()
+        self.db.commit.assert_not_called()
+        self.db.rollback.assert_called_once()
+
+    def test_rejects_session_id_not_bound_to_authenticated_user(self):
+        mismatched_request = BookingRequest(
+            eventId=self.event.id,
+            seatCodes=["A2"],
+            sessionId="another-session",
+        )
+
+        with self.assertRaises(HTTPException) as raised:
+            create_booking(mismatched_request, self.db, self.user)
+
+        self.assertEqual(raised.exception.status_code, 403)
+        self.db.query.assert_not_called()
+        self.db.commit.assert_not_called()
+        self.db.rollback.assert_called_once()
+
+    def test_rejects_booking_without_waiting_room_admission(self):
+        request_without_admission = BookingRequest(
+            eventId=self.event.id,
+            seatCodes=["A2"],
+            sessionId=self.user.session_id,
+        )
+
+        with self.assertRaises(HTTPException) as raised:
+            create_booking(request_without_admission, self.db, self.user)
+
+        self.assertEqual(raised.exception.status_code, 403)
+        self.db.query.assert_not_called()
+        self.db.commit.assert_not_called()
+        self.db.rollback.assert_called_once()
+
+    def test_rejects_expired_waiting_room_admission(self):
+        with patch(
+            "routes.bookings.validate_admission_token",
+            return_value=False,
+        ):
+            with self.assertRaises(HTTPException) as raised:
+                create_booking(self.request, self.db, self.user)
+
+        self.assertEqual(raised.exception.status_code, 403)
         self.db.query.assert_not_called()
         self.db.commit.assert_not_called()
         self.db.rollback.assert_called_once()

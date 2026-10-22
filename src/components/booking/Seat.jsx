@@ -2,26 +2,31 @@ import React from 'react';
 import './Seat.css';
 
 export const Seat = ({ seat, isSelected, onSelect }) => {
-  const isBooked = seat.status === 'UNAVAILABLE';
+  const seatNumber = seat.seatNumber || seat.code;
+  const normalizedStatus = seat.status?.toLowerCase();
+  const isBooked = ['booked', 'unavailable'].includes(normalizedStatus);
+  const isLocked = normalizedStatus === 'locked' && !seat.lockedByCurrentUser;
+  const isUnavailable = isBooked || isLocked;
 
   const handleClick = () => {
-    if (!isBooked) {
+    if (!isUnavailable) {
       onSelect(seat);
     }
   };
 
   let seatClass = 'available';
-  if (isBooked) seatClass = 'unavailable';
+  if (isUnavailable) seatClass = 'unavailable';
   else if (isSelected) seatClass = 'selected';
 
   return (
     <button
       className={`ev-seat ev-seat--${seatClass}`}
-      disabled={isBooked}
+      disabled={isUnavailable}
       onClick={handleClick}
-      title={`Seat ${seat.code} (${seat.category})`}
+      aria-label={`Seat ${seatNumber}: ${normalizedStatus || 'available'}`}
+      title={`Seat ${seatNumber} (${normalizedStatus || 'available'})`}
     >
-      {seat.number}
+      {seatNumber}
     </button>
   );
 };

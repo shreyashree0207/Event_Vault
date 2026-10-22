@@ -1,8 +1,11 @@
 import uuid
+import os
 
 from redis_client import redis_client
 
-LOCK_DURATION_SECONDS = 300
+LOCK_DURATION_SECONDS = int(os.getenv("SEAT_LOCK_TTL_SECONDS", "300"))
+if LOCK_DURATION_SECONDS <= 0:
+    raise RuntimeError("SEAT_LOCK_TTL_SECONDS must be a positive integer.")
 
 
 def lock_seat(event_id: str, seat_code: str, session_id: str) -> bool:

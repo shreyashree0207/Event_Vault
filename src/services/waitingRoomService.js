@@ -1,4 +1,5 @@
 import { apiClient, USE_REAL_BACKEND } from './api';
+import { authService } from './authService';
 
 /**
  * Waiting Room Service (Stateful queue simulation for high-demand events)
@@ -8,11 +9,32 @@ import { apiClient, USE_REAL_BACKEND } from './api';
  */
 
 const sessionQueueMap = new Map();
+const ADMISSION_STORAGE_PREFIX = 'ev_admission:';
+
+function admissionStorageKey(eventId) {
+  const sessionId = authService.getCurrentUser()?.sessionId;
+  return sessionId
+    ? `${ADMISSION_STORAGE_PREFIX}${eventId}:${sessionId}`
+    : null;
+}
+
+function rememberAdmission(eventId, queueState) {
+  const key = admissionStorageKey(eventId);
+  if (!key) return queueState;
+
+  if (queueState.status === 'ADMITTED' && queueState.admittedToken) {
+    sessionStorage.setItem(key, queueState.admittedToken);
+  } else if (['EXPIRED', 'COMPLETED'].includes(queueState.status)) {
+    sessionStorage.removeItem(key);
+  }
+  return queueState;
+}
 
 export const waitingRoomService = {
   async joinWaitingRoom(eventId) {
     if (USE_REAL_BACKEND) {
-      return apiClient.post(`/waiting-room/${eventId}/join`, {});
+      const status = await apiClient.post(`/waiting-room/${eventId}/join`, {});
+      return rememberAdmission(eventId, status);
     }
 
     await new Promise(resolve => setTimeout(resolve, 500));
@@ -34,7 +56,8 @@ export const waitingRoomService = {
 
   async getQueueStatus(eventId) {
     if (USE_REAL_BACKEND) {
-      return apiClient.get(`/waiting-room/${eventId}/status`);
+      const status = await apiClient.get(`/waiting-room/${eventId}/status`);
+      return rememberAdmission(eventId, status);
     }
 
     await new Promise(resolve => setTimeout(resolve, 200));
@@ -64,5 +87,15 @@ export const waitingRoomService = {
 
   resetQueue(eventId) {
     sessionQueueMap.delete(eventId);
+  },
+
+  getAdmissionToken(eventId) {
+    const key = admissionStorageKey(eventId);
+    return key ? sessionStorage.getItem(key) : null;
+  },
+
+  clearAdmissionToken(eventId) {
+    const key = admissionStorageKey(eventId);
+    if (key) sessionStorage.removeItem(key);
   }
 };

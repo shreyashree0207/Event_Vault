@@ -5,11 +5,14 @@ from sqlalchemy.exc import SQLAlchemyError
 from redis.exceptions import RedisError
 from pydantic import BaseModel
 from datetime import datetime
+import uuid
 
 from database import SessionLocal
 from models import Event, Seat, Booking, Ticket
 from rabbitmq_publisher import publish_ticket_job
 from redis_client import redis_client
+from auth import AuthenticatedUser, get_current_user
+from waiting_room_store import release_admission, validate_admission_token
 
 
 router = APIRouter(
@@ -38,6 +41,7 @@ class BookingRequest(BaseModel):
     eventId: str
     seatCodes: list[str]
     sessionId: str | None = None
+    admissionToken: str | None = None
 
 
 # =========================================================
@@ -48,13 +52,28 @@ class BookingRequest(BaseModel):
 @router.post("")
 def create_booking(
     booking_data: BookingRequest,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: AuthenticatedUser = Depends(get_current_user),
 ):
     try:
         if not booking_data.sessionId:
             raise HTTPException(
                 status_code=400,
                 detail="sessionId is required to confirm a booking"
+            )
+        if booking_data.sessionId != current_user.session_id:
+            raise HTTPException(
+                status_code=403,
+                detail="Booking session does not belong to the signed-in user.",
+            )
+        if not booking_data.admissionToken or not validate_admission_token(
+            booking_data.eventId,
+            current_user.session_id,
+            booking_data.admissionToken,
+        ):
+            raise HTTPException(
+                status_code=403,
+                detail="A valid waiting-room admission is required to book seats.",
             )
 
         # Reject empty or duplicate seat selections
@@ -170,7 +189,7 @@ def create_booking(
 
         for seat in selected_seats:
             booking = Booking(
-                user_id=1,
+                user_id=current_user.id,
                 event_id=booking_data.eventId,
                 seat_id=seat.id,
                 status="confirmed",
@@ -179,6 +198,20 @@ def create_booking(
             bookings.append(booking)
 
         db.add_all(bookings)
+        db.flush()
+
+        db.add_all([
+            Ticket(
+                booking_id=booking.id,
+                ticket_code=f"EV-{uuid.uuid4().hex.upper()}",
+                status="pending",
+                ticket_url=None,
+                object_key=None,
+                error_message=None,
+                created_at=booking_time,
+            )
+            for booking in bookings
+        ])
 
         event.available_seats -= len(selected_seats)
 
@@ -210,6 +243,17 @@ def create_booking(
     # The booking is committed. Queue ticket jobs afterwards.
     # A RabbitMQ failure must not undo an already committed booking.
     ticket_queue_warnings = []
+    admission_release_warning = False
+
+    try:
+        release_admission(
+            booking_data.eventId,
+            current_user.session_id,
+            booking_data.admissionToken,
+        )
+    except RedisError as exc:
+        admission_release_warning = True
+        print(f"WARNING: Booking {bookings[0].id} completed but admission could not be released: {exc}")
 
     for booking in bookings:
         try:
@@ -243,7 +287,8 @@ def create_booking(
         "paymentStatus": "PAID",
         "bookingStatus": "CONFIRMED",
         "createdAt": booking_time,
-        "ticketQueueWarnings": ticket_queue_warnings
+        "ticketQueueWarnings": ticket_queue_warnings,
+        "admissionReleaseWarning": admission_release_warning,
     }
 
 
@@ -255,11 +300,15 @@ def create_booking(
 @router.get("/{booking_id}")
 def get_booking(
     booking_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: AuthenticatedUser = Depends(get_current_user),
 ):
     booking = (
         db.query(Booking)
-        .filter(Booking.id == booking_id)
+        .filter(
+            Booking.id == booking_id,
+            Booking.user_id == current_user.id,
+        )
         .first()
     )
 
@@ -316,11 +365,15 @@ def get_booking(
 @router.get("/{booking_id}/ticket-status")
 def get_ticket_status(
     booking_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: AuthenticatedUser = Depends(get_current_user),
 ):
     booking = (
         db.query(Booking)
-        .filter(Booking.id == booking_id)
+        .filter(
+            Booking.id == booking_id,
+            Booking.user_id == current_user.id,
+        )
         .first()
     )
 
@@ -337,16 +390,25 @@ def get_ticket_status(
     )
 
     if not ticket:
-        return {
-            "bookingId": booking.id,
-            "status": "PROCESSING",
-            "message": "Your ticket is being generated"
-        }
+        raise HTTPException(
+            status_code=409,
+            detail="Ticket generation has not been queued. Please retry ticket generation.",
+        )
 
     return {
         "bookingId": booking.id,
-        "status": "READY",
+        "status": (
+            "READY" if ticket.status.lower() == "valid"
+            else ticket.status.upper()
+        ),
         "ticketId": ticket.id,
         "ticketCode": ticket.ticket_code,
-        "message": "Ticket is ready"
+        "message": (
+            "Ticket is ready" if ticket.status.lower() == "valid"
+            else (
+                "Ticket generation failed. Retry generation from My Tickets."
+                if ticket.status.lower() == "failed"
+                else "Ticket generation is in progress."
+            )
+        ),
     }

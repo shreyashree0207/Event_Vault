@@ -1,3 +1,5 @@
+import { readSession } from './sessionStorage';
+
 /**
  * Central API Client Abstraction
  * 
@@ -12,9 +14,15 @@ export const USE_REAL_BACKEND = true;
 
 async function request(endpoint, options = {}) {
   let response;
+  const headers = new Headers(options.headers);
+  const accessToken = readSession()?.accessToken;
+  if (accessToken) {
+    headers.set('Authorization', `Bearer ${accessToken}`);
+  }
   try {
     response = await fetch(`${API_BASE_URL}${endpoint}`, {
       ...options,
+      headers,
     });
   } catch (error) {
     if (error instanceof TypeError) {
@@ -51,6 +59,35 @@ async function request(endpoint, options = {}) {
   return responseData;
 }
 
+async function download(endpoint) {
+  const headers = new Headers();
+  const accessToken = readSession()?.accessToken;
+  if (accessToken) {
+    headers.set('Authorization', `Bearer ${accessToken}`);
+  }
+
+  let response;
+  try {
+    response = await fetch(`${API_BASE_URL}${endpoint}`, { headers });
+  } catch (error) {
+    if (error instanceof TypeError) {
+      throw new Error(
+        `Unable to connect to Event Vault API at ${API_BASE_URL}. ` +
+        'Verify that FastAPI is running and VITE_API_BASE_URL is correct.'
+      );
+    }
+    throw error;
+  }
+
+  if (!response.ok) {
+    const responseData = await response.json().catch(() => null);
+    throw new Error(
+      responseData?.detail || `Ticket download failed (${response.status}).`
+    );
+  }
+  return response.blob();
+}
+
 export const apiClient = {
   async get(endpoint) {
     if (USE_REAL_BACKEND) {
@@ -80,4 +117,10 @@ export const apiClient = {
     }
     throw new Error("Backend not configured. Service should fall back to mock data.");
   }
+},
+async download(endpoint) {
+  if (USE_REAL_BACKEND) {
+    return download(endpoint);
+  }
+  throw new Error("Ticket downloads require the FastAPI backend.");
 };

@@ -2,12 +2,12 @@ import React from 'react';
 import './QueueProgress.css';
 
 export const QueueProgress = ({ queueData }) => {
-  // Compute artificial percentage based on users ahead
-  const initialEstimateMax = 350;
   const usersAhead = queueData.usersAhead || 0;
-  const progressPercent = queueData.status === 'ADMITTED' 
-    ? 100 
-    : Math.min(95, Math.max(5, Math.round(((initialEstimateMax - usersAhead) / initialEstimateMax) * 100)));
+  const progressPercent = queueData.status === 'ADMITTED'
+    ? 100
+    : queueData.status === 'WAITING'
+      ? Math.max(5, Math.round(100 / (usersAhead + 1)))
+      : 0;
 
   return (
     <div className="ev-queue-progress-wrapper">

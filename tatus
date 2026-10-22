@@ -1,0 +1,5 @@
+[33me60bcb1[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mfeature/booking-safety[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32mmain[m[33m)[m Update Event Vault changes
+[33m9dd5d63[m Validate booking session ID before processing
+[33m23bfda0[m Merge pull request #1 from shreyashree0207/feature/booking-safety
+[33m4f67dd9[m[33m ([m[1;31morigin/feature/booking-safety[m[33m)[m Integrate seat locking and waiting room
+[33m4b81108[m Route all events through virtual waiting room

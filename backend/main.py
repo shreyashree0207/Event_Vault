@@ -1,26 +1,32 @@
 
 import os
 
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import SQLAlchemyError
 from pydantic import BaseModel
+from redis.exceptions import RedisError
 
 from database import Base, engine, SessionLocal
 import models
 
+from routes.auth import router as auth_router
 from routes.events import router as events_router
 from routes.bookings import router as bookings_router
 from routes.waiting_room import router as waiting_room_router
 from routes.tickets import router as tickets_router
+from auth import AuthenticatedUser, get_current_user
 
-from seat_locker import lock_seat, unlock_seat, new_session_id
+from seat_locker import LOCK_DURATION_SECONDS, lock_seat, unlock_seat
+from waiting_room_store import validate_admission_token
 
 
 class SeatLockRequest(BaseModel):
     event_id: str
     seat_code: str
     session_id: str | None = None
+    admission_token: str | None = None
 
 
 # =========================================================
@@ -64,43 +70,112 @@ app.add_middleware(
 # =========================================================
 
 @app.post("/seat-locks")
-def create_seat_lock(request: SeatLockRequest):
-    session_id = request.session_id or new_session_id()
+def create_seat_lock(
+    request: SeatLockRequest,
+    current_user: AuthenticatedUser = Depends(get_current_user),
+):
+    if request.session_id and request.session_id != current_user.session_id:
+        raise HTTPException(status_code=403, detail="Session does not belong to this user.")
 
-    acquired = lock_seat(
-        request.event_id,
-        request.seat_code,
-        session_id,
-    )
-
-    if not acquired:
+    session_id = current_user.session_id
+    try:
+        admission_valid = bool(
+            request.admission_token
+            and validate_admission_token(
+                request.event_id,
+                session_id,
+                request.admission_token,
+            )
+        )
+    except RedisError:
         raise HTTPException(
-            status_code=409,
-            detail="This seat is temporarily locked by another session.",
+            status_code=503,
+            detail="Waiting-room service is unavailable. Please try again.",
+        )
+    if not admission_valid:
+        raise HTTPException(
+            status_code=403,
+            detail="A valid waiting-room admission is required to lock seats.",
         )
 
-    return {
-        "event_id": request.event_id,
-        "seat_code": request.seat_code,
-        "session_id": session_id,
-        "expires_in_seconds": 300,
-        "message": "Seat temporarily locked.",
-    }
+    db = SessionLocal()
+    try:
+        event = db.query(models.Event).filter(
+            models.Event.id == request.event_id
+        ).first()
+        if event is None:
+            raise HTTPException(status_code=404, detail="Event not found.")
+
+        seat = (
+            db.query(models.Seat)
+            .filter(
+                models.Seat.event_id == request.event_id,
+                models.Seat.seat_number == request.seat_code,
+            )
+            .with_for_update()
+            .first()
+        )
+        if seat is None:
+            raise HTTPException(status_code=404, detail="Seat not found.")
+        if seat.status.lower() != "available":
+            raise HTTPException(
+                status_code=409,
+                detail="This seat is already booked or unavailable.",
+            )
+
+        acquired = lock_seat(request.event_id, request.seat_code, session_id)
+        if not acquired:
+            raise HTTPException(
+                status_code=409,
+                detail="This seat is temporarily locked by another session.",
+            )
+
+        db.commit()
+        return {
+            "event_id": request.event_id,
+            "seat_code": request.seat_code,
+            "session_id": session_id,
+            "expires_in_seconds": LOCK_DURATION_SECONDS,
+            "message": "Seat temporarily locked.",
+        }
+    except HTTPException:
+        db.rollback()
+        raise
+    except RedisError:
+        db.rollback()
+        raise HTTPException(
+            status_code=503,
+            detail="Seat-lock service is unavailable. Please try again.",
+        )
+    except SQLAlchemyError:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail="Database error while locking the seat.",
+        )
+    finally:
+        db.close()
 
 
 @app.delete("/seat-locks")
-def release_seat_lock(request: SeatLockRequest):
-    if not request.session_id:
-        raise HTTPException(
-            status_code=400,
-            detail="session_id is required to release a seat lock.",
-        )
+def release_seat_lock(
+    request: SeatLockRequest,
+    current_user: AuthenticatedUser = Depends(get_current_user),
+):
+    if request.session_id and request.session_id != current_user.session_id:
+        raise HTTPException(status_code=403, detail="Session does not belong to this user.")
 
-    released = unlock_seat(
-        request.event_id,
-        request.seat_code,
-        request.session_id,
-    )
+    try:
+        released = unlock_seat(
+            request.event_id,
+            request.seat_code,
+            current_user.session_id,
+        )
+    except RedisError:
+        raise HTTPException(
+            status_code=503,
+            detail="Seat-lock service is unavailable. Please try again.",
+        )
 
     if not released:
         raise HTTPException(
@@ -123,6 +198,7 @@ Base.metadata.create_all(bind=engine)
 # =========================================================
 
 app.include_router(events_router)
+app.include_router(auth_router)
 app.include_router(bookings_router)
 app.include_router(waiting_room_router)
 app.include_router(tickets_router)
@@ -158,13 +234,15 @@ def health():
 # =========================================================
 
 @app.get("/user/bookings")
-def get_user_bookings():
+def get_user_bookings(
+    current_user: AuthenticatedUser = Depends(get_current_user),
+):
     db: Session = SessionLocal()
 
     try:
         bookings = (
             db.query(models.Booking)
-            .filter(models.Booking.user_id == 1)
+            .filter(models.Booking.user_id == current_user.id)
             .order_by(models.Booking.id.desc())
             .all()
         )
