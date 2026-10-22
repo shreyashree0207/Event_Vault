@@ -2,13 +2,19 @@ from fastapi import APIRouter, Depends, HTTPException
 from redis.exceptions import RedisError
 from sqlalchemy.orm import Session
 
+from pydantic import BaseModel
+
 from auth import AuthenticatedUser, get_current_user
 from database import SessionLocal
 from models import Event
-from waiting_room_store import get_queue_status
+from waiting_room_store import get_queue_status, leave_queue_or_admission
 
 
 router = APIRouter(prefix="/waiting-room", tags=["Waiting Room"])
+
+
+class LeaveWaitingRoomRequest(BaseModel):
+    admission_token: str | None = None
 
 
 def get_db():
@@ -53,3 +59,20 @@ def get_queue_status_endpoint(
     current_user: AuthenticatedUser = Depends(get_current_user),
 ):
     return _get_status(event_id, db, current_user)
+
+
+@router.post("/{event_id}/leave")
+def leave_waiting_room_endpoint(
+    event_id: str,
+    body: LeaveWaitingRoomRequest = None,
+    current_user: AuthenticatedUser = Depends(get_current_user),
+):
+    token = body.admission_token if body else None
+    try:
+        leave_queue_or_admission(event_id, current_user.session_id, token)
+        return {"message": "Left waiting room successfully."}
+    except RedisError:
+        raise HTTPException(
+            status_code=503,
+            detail="Waiting-room service is unavailable. Please try again.",
+        )

@@ -116,11 +116,12 @@ export const apiClient = {
       });
     }
     throw new Error("Backend not configured. Service should fall back to mock data.");
-  }
-},
-async download(endpoint) {
-  if (USE_REAL_BACKEND) {
-    return download(endpoint);
-  }
-  throw new Error("Ticket downloads require the FastAPI backend.");
+  },
+
+  async download(endpoint) {
+    if (USE_REAL_BACKEND) {
+      return download(endpoint);
+    }
+    throw new Error("Ticket downloads require the FastAPI backend.");
+  },
 };

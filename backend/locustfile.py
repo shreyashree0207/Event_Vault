@@ -5,7 +5,7 @@ from locust import HttpUser, between, task
 from locust.exception import StopUser
 
 
-EVENT_ID = os.getenv("LOCUST_EVENT_ID")
+EVENT_ID = os.getenv("LOCUST_EVENT_ID", "evt-cyber-fest-2026")
 EMAIL_DOMAIN = os.getenv("LOCUST_TEST_EMAIL_DOMAIN", "example.invalid")
 ALLOW_BOOKINGS = os.getenv("LOCUST_ALLOW_BOOKINGS", "false").lower() == "true"
 
@@ -52,16 +52,18 @@ class EventVaultUser(HttpUser):
         if not getattr(self, "authenticated", False) or self.booking_done:
             return
 
-        if self.admission_token:
-            response = self.client.get(
-                f"/waiting-room/{EVENT_ID}/status",
-                name="/waiting-room/{event_id}/status",
-            )
-        else:
+        if not getattr(self, "in_waiting_room", False):
             response = self.client.post(
                 f"/waiting-room/{EVENT_ID}/join",
                 json={},
                 name="/waiting-room/{event_id}/join",
+            )
+            if response.status_code == 200:
+                self.in_waiting_room = True
+        else:
+            response = self.client.get(
+                f"/waiting-room/{EVENT_ID}/status",
+                name="/waiting-room/{event_id}/status",
             )
         if response.status_code != 200:
             return
@@ -131,17 +133,30 @@ class EventVaultUser(HttpUser):
         )
         self.locked_seat = None
 
-    def on_stop(self):
-        if (
-            getattr(self, "authenticated", False)
-            and getattr(self, "locked_seat", None)
-        ):
-            self.client.delete(
-                "/seat-locks",
-                json={
-                    "event_id": EVENT_ID,
-                    "seat_code": self.locked_seat,
-                    "session_id": self.session_id,
-                },
-                name="/seat-locks [cleanup]",
+        # Release admission so the queue advances and waiting users move forward
+        if self.admission_token:
+            self.client.post(
+                f"/waiting-room/{EVENT_ID}/leave",
+                json={"admission_token": self.admission_token},
+                name="/waiting-room/{event_id}/leave",
             )
+            self.admission_token = None
+
+    def on_stop(self):
+        if getattr(self, "authenticated", False):
+            if getattr(self, "locked_seat", None):
+                self.client.delete(
+                    "/seat-locks",
+                    json={
+                        "event_id": EVENT_ID,
+                        "seat_code": self.locked_seat,
+                        "session_id": self.session_id,
+                    },
+                    name="/seat-locks [cleanup]",
+                )
+            if getattr(self, "admission_token", None):
+                self.client.post(
+                    f"/waiting-room/{EVENT_ID}/leave",
+                    json={"admission_token": self.admission_token},
+                    name="/waiting-room/{event_id}/leave",
+                )

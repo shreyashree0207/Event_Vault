@@ -233,11 +233,13 @@ def create_booking(
             detail="Seat-lock service is unavailable. Please try again."
         )
 
-    except SQLAlchemyError:
+    except SQLAlchemyError as exc:
         db.rollback()
+        import traceback
+        traceback.print_exc()
         raise HTTPException(
             status_code=500,
-            detail="Database error while creating the booking."
+            detail=f"Database error while creating the booking: {exc}"
         )
 
     # The booking is committed. Queue ticket jobs afterwards.

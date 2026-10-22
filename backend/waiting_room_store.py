@@ -196,3 +196,19 @@ def release_admission(
             STATE_TTL_SECONDS,
         )
     )
+
+
+def leave_queue_or_admission(
+    event_id: str,
+    session_id: str,
+    admission_token: str | None = None,
+) -> bool:
+    queue_key, admitted_key, token_key, state_key = _keys(event_id, session_id)
+    if admission_token:
+        release_admission(event_id, session_id, admission_token)
+    redis_client.zrem(queue_key, session_id)
+    redis_client.zrem(admitted_key, session_id)
+    redis_client.delete(token_key)
+    redis_client.delete(state_key)
+    return True
+

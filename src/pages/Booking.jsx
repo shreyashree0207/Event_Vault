@@ -112,10 +112,14 @@ export const Booking = () => {
     pendingLocksRef.current.add(seatCode);
 
     try {
+      const token = admissionTokenRef.current || waitingRoomService.getAdmissionToken(eventId);
+      admissionTokenRef.current = token;
+
       const lock = await bookingService.acquireSeatLock(
         eventId,
         seatCode,
-        sessionIdRef.current
+        sessionIdRef.current,
+        token
       );
       const lockSessionId = lock.session_id || sessionIdRef.current;
       sessionIdRef.current = lockSessionId;
@@ -139,11 +143,18 @@ export const Booking = () => {
       );
     } catch (err) {
       if (activeEventIdRef.current === eventId) {
-        setError(
+        const errorMsg =
           err.response?.data?.detail ||
           err.message ||
-          `Seat ${seatCode} could not be locked.`
-        );
+          `Seat ${seatCode} could not be locked.`;
+
+        // If admission token expired or missing, redirect to waiting room
+        if (errorMsg.includes('waiting-room') || errorMsg.includes('403')) {
+          navigate(`/waiting-room/${eventId}`);
+          return;
+        }
+
+        setError(errorMsg);
       }
     } finally {
       pendingLocksRef.current.delete(seatCode);
@@ -186,7 +197,20 @@ export const Booking = () => {
   };
 
   if (loading) return <PageContainer><Loader message="Loading venue seat layout & locking state..." /></PageContainer>;
-  if (error || !event) return <PageContainer><ErrorState title="Booking Session Error" message={error} /></PageContainer>;
+  if (error || !event) {
+    return (
+      <PageContainer>
+        <ErrorState
+          title="Booking Session Error"
+          message={error}
+          onRetry={() => {
+            setError(null);
+            navigate(`/waiting-room/${eventId}`);
+          }}
+        />
+      </PageContainer>
+    );
+  }
 
   const subtotal = selectedSeats.length * event.startingPrice;
   const serviceFee = Math.round(subtotal * 0.12 * 100) / 100;
